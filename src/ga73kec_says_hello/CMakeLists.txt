@@ -104,6 +104,7 @@ include_directories(
 
 ## Declare a cpp executable
 # add_executable(ga73kec_says_hello_node src/ga73kec_says_hello_node.cpp)
+add_executable(hello_world_node src/hello_world_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -113,7 +114,7 @@ include_directories(
 # target_link_libraries(ga73kec_says_hello_node
 #   ${catkin_LIBRARIES}
 # )
-
+target_link_libraries(hello_world_node ${roscpp_LIBRARIES})
 #############
 ## Install ##
 #############
