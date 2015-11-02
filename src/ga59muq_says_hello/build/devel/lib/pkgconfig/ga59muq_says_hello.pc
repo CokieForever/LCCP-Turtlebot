@@ -1,0 +1,8 @@
+prefix=/home/ros/group7/src/ga59muq_says_hello/build/devel
+
+Name: ga59muq_says_hello
+Description: Description of ga59muq_says_hello
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/ros/group7/src/ga59muq_says_hello/build/devel/lib 
+Requires: 

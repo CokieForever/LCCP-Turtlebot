@@ -1,0 +1,8 @@
+prefix=/usr/local
+
+Name: ga59muq_says_hello
+Description: Description of ga59muq_says_hello
+Version: 0.0.0
+Cflags: 
+Libs: -L/usr/local/lib 
+Requires: 
