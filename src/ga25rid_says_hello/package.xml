@@ -1,0 +1,17 @@
+<package>
+  <!-- Package Metadata -->
+  <name>ga25rid_says_hello</name>
+  <maintainer email="you@example.com">Your Name</maintainer>
+  <description>
+    A ROS tutorial.
+  </description>
+  <version>0.0.0</version>
+  <license>BSD</license>
+
+  <!-- Required by Catkin -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Package Dependencies -->
+  <build_depend>roscpp</build_depend>
+  <run_depend>roscpp</run_depend>
+</package>
