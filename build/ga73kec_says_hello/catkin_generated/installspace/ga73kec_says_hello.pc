@@ -1,0 +1,8 @@
+prefix=/home/ros/group7/install
+
+Name: ga73kec_says_hello
+Description: Description of ga73kec_says_hello
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/ros/group7/install/lib 
+Requires: 
