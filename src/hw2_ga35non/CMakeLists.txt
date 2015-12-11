@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   rosconsole
   roscpp
   rostime
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -105,6 +106,8 @@ include_directories(
 ## Declare a cpp executable
 add_executable(turtlemove src/turtlemove.cpp)
 add_executable(turtlecircle src/turtlecircle.cpp)
+add_executable(turtlefollow_broadcast src/turtlefollow_broadcast.cpp)
+add_executable(turtlefollow_listening src/turtlefollow_listening.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -116,6 +119,14 @@ target_link_libraries(turtlemove
   ${roscpp_LIBRARIES}
 )
 target_link_libraries(turtlecircle
+  ${catkin_LIBRARIES}
+  ${roscpp_LIBRARIES}
+)
+target_link_libraries(turtlefollow_broadcast
+  ${catkin_LIBRARIES}
+  ${roscpp_LIBRARIES}
+)
+target_link_libraries(turtlefollow_listening
   ${catkin_LIBRARIES}
   ${roscpp_LIBRARIES}
 )
