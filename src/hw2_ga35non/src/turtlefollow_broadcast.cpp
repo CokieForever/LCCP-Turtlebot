@@ -5,6 +5,8 @@
 #include <vector>
 #include <std_srvs/Empty.h>
 
+#include "utilities.h"
+
 class Broadcaster
 {
 	private:
@@ -29,8 +31,9 @@ class Broadcaster
 			ROS_INFO("Subscribing to turtle \"%s\"...", m_turtleName.c_str());
 			m_turtleSubscriber = node.subscribe("/"+m_turtleName+"/pose", 10, &Broadcaster::updateTurtleTransform, this);
 			ros::Rate rate(10);
-			while (m_turtleSubscriber.getNumPublishers() <= 0)
+			while (ros::ok() && m_turtleSubscriber.getNumPublishers() <= 0)
 				rate.sleep();
+			checkRosOk_v();
 		}
 
 		std::string getTurtleName() const
@@ -50,6 +53,8 @@ class MyLittleTurtlesBroadcast
 		{
 			ROS_INFO("Reseting Turtlesim...");
 			ros::service::waitForService("reset");
+			checkRosOk_v();
+			
 			ros::ServiceClient resetService = m_node.serviceClient<std_srvs::Empty>("reset");
 			std_srvs::Empty empty;
 			resetService.call(empty);
@@ -89,6 +94,8 @@ class MyLittleTurtlesBroadcast
 			}
 			
 			ros::service::waitForService("spawn");
+			checkRosOk(false);
+
 			ros::ServiceClient addTurtleService = m_node.serviceClient<turtlesim::Spawn>("spawn");
 			turtlesim::Spawn spawn;
 			spawn.request.x = (std::rand() / (double)RAND_MAX) * 10.0 + 0.5;

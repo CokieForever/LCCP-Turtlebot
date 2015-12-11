@@ -3,6 +3,8 @@
 #include <geometry_msgs/Twist.h>
 #include <turtlesim/Spawn.h>
 
+#include "utilities.h"
+
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "turtlefollow_listening");
@@ -40,6 +42,7 @@ int main(int argc, char** argv)
 		ros::Publisher pub = node.advertise<geometry_msgs::Twist>("/"+(*it)+"/cmd_vel", 10);
 		while (ros::ok() && pub.getNumSubscribers() <= 0)
 			rate.sleep();
+		checkRosOk(-1);
 		turtlesPublishers.push_back(pub);
 	}
 

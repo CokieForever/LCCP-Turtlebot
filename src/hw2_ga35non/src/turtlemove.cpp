@@ -5,6 +5,8 @@
 #include <geometry_msgs/Vector3.h>
 #include <turtlesim/Pose.h>
 
+#include "utilities.h"
+
 class MyLittleTurtle
 {
 	private:
@@ -47,9 +49,9 @@ class MyLittleTurtle
 		{
 			ros::Duration duration(0.25);
 			int i=0;
-			for (; i < 20 && !isTurtleMoving() ; i++)
+			for (; ros::ok() && i < 20 && !isTurtleMoving() ; i++)
 				duration.sleep();
-			return i < 20;
+			return ros::ok() && i < 20;
 		}
 
 		bool waitForMovementEnd(bool strict = false)
@@ -61,7 +63,7 @@ class MyLittleTurtle
 			{
 				duration.sleep();
 			} while (isTurtleMoving(strict));
-			return true;
+			return ros::ok();
 		}
 
 		void sendMoveOrder(double linear, double angular)
@@ -84,14 +86,14 @@ class MyLittleTurtle
 
 			ROS_INFO("Waiting for turtlesim...");
 			ros::Rate loopRate(10);
-			while (m_turtlesimPublisher.getNumSubscribers() <= 0 || m_turtlesimSubscriber.getNumPublishers() <= 0)
+			while (ros::ok() && (m_turtlesimPublisher.getNumSubscribers() <= 0 || m_turtlesimSubscriber.getNumPublishers() <= 0))
 				loopRate.sleep();
-
+			checkRosOk_v();
+			
 			ROS_INFO("Retrieving initial status...");
 			ros::spinOnce();
 			ROS_INFO("Initial status: x=%.3f, y=%.3f, z=%.3f", m_status.x, m_status.y, m_status.z);
 			
-
 			ROS_INFO("Everything's ready.");
 		}
 
@@ -108,6 +110,7 @@ class MyLittleTurtle
 			sendMoveOrder(0.0, M_PI/4);
 			if (!waitForMovementEnd())
 			{
+				checkRosOk_v();
 				ROS_WARN("The turtle does not rotate.");
 				return;
 			}
@@ -116,6 +119,7 @@ class MyLittleTurtle
 			sendMoveOrder(1.0, 0.0);
 			if (!waitForMovementStart())
 			{
+				checkRosOk_v();
 				ROS_WARN("The turtle does not move.");
 				return;
 			}
@@ -127,7 +131,8 @@ class MyLittleTurtle
 				sendMoveOrder(1.0, 0.0);
 				duration.sleep();
 			} while (isTurtleMoving(true));
-
+			checkRosOk_v();
+			
 			sendMoveOrder(0.0, 0.0);
 			ROS_INFO("Well, it seems that the Turtle does not move anymore, or at least not correctly.");
 			ROS_INFO("Final status: x=%.3f, y=%.3f, z=%.3f", m_status.x, m_status.y, m_status.z);

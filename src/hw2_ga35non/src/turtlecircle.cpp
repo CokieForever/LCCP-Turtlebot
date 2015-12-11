@@ -4,6 +4,8 @@
 #include <turtlesim/Pose.h>
 #include <std_srvs/Empty.h>
 
+#include "utilities.h"
+
 class MyLittleTurtles
 {
 	private:
@@ -75,14 +77,16 @@ class MyLittleTurtles
 			m_ourTurtlePub = m_nodeHandle.advertise<geometry_msgs::Twist>("/"+turtleName+"/cmd_vel", 10);
 			m_theirTurtlePub = m_nodeHandle.advertise<geometry_msgs::Twist>("/turtle1/cmd_vel", 10);
 			ros::Rate rate(10);
-			while (m_ourTurtlePub.getNumSubscribers() <= 0 || m_theirTurtlePub.getNumSubscribers() <= 0)
+			while (ros::ok() && (m_ourTurtlePub.getNumSubscribers() <= 0 || m_theirTurtlePub.getNumSubscribers() <= 0))
 				rate.sleep();
+			checkRosOk_v();
 			
 			ROS_INFO("Creating subscribers for our turtles...");
 			m_ourTurtleSub = m_nodeHandle.subscribe("/"+turtleName+"/pose", 10, &MyLittleTurtles::updateOurTurtleStatus, this);
 			m_theirTurtleSub = m_nodeHandle.subscribe("/turtle1/pose", 10, &MyLittleTurtles::updateTheirTurtleStatus, this);
-			while (m_ourTurtleSub.getNumPublishers() <= 0 || m_theirTurtleSub.getNumPublishers() <= 0)
+			while (ros::ok() && (m_ourTurtleSub.getNumPublishers() <= 0 || m_theirTurtleSub.getNumPublishers() <= 0))
 				rate.sleep();
+			checkRosOk_v();
 			
 			ROS_INFO("Retrieving initial statuses...");
 			ros::spinOnce();
@@ -102,13 +106,15 @@ class MyLittleTurtles
 
 			ros::Duration duration(0.25);
 			int i;
-			for (i=0 ; i < 20 ; i++)
+			for (i=0 ; ros::ok() && i < 20 ; i++)
 			{
 				if (vectorDist(ourInitialStatus, m_ourStatus) > MARGIN_ERR && vectorDist(theirInitialStatus, m_theirStatus) > MARGIN_ERR)
 					break;
 				duration.sleep();
 				ros::spinOnce();
 			}
+			checkRosOk(false);
+
 			if (i >= 20)
 			{
 				ROS_WARN("At least one turtle is not moving.");
@@ -125,7 +131,8 @@ class MyLittleTurtles
 				sendMoveOrder(2.0, 1.8);
 				rate.sleep();			
 			}
-
+			checkRosOk(false);
+			
 			ROS_INFO("At least one turtle reached its destination!");
 			sendMoveOrder(0.0, 0.0);
 			return true;
