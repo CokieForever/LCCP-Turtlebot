@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/ros/group7/src/ga73kec_says_hello/src/hello_world_node.cpp
+/home/ga73kec/group7/src/ga73kec_says_hello/src/hello_world_node.cpp
 ros/ros.h
 -
 
@@ -225,6 +225,8 @@ boost/make_shared.hpp
 -
 
 /opt/ros/indigo/include/ros/message_forward.h
+cstddef
+-
 memory
 -
 

@@ -35,10 +35,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/ros/group7/src
+CMAKE_SOURCE_DIR = /home/ga73kec/group7/src
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/ros/group7/build
+CMAKE_BINARY_DIR = /home/ga73kec/group7/build
 
 # Utility rule file for clean_test_results.
 
@@ -46,7 +46,7 @@ CMAKE_BINARY_DIR = /home/ros/group7/build
 include CMakeFiles/clean_test_results.dir/progress.make
 
 CMakeFiles/clean_test_results:
-	/usr/bin/cmake -E remove_directory /home/ros/group7/build/test_results
+	/usr/bin/python /opt/ros/indigo/share/catkin/cmake/test/remove_test_results.py /home/ga73kec/group7/build/test_results
 
 clean_test_results: CMakeFiles/clean_test_results
 clean_test_results: CMakeFiles/clean_test_results.dir/build.make
@@ -61,6 +61,6 @@ CMakeFiles/clean_test_results.dir/clean:
 .PHONY : CMakeFiles/clean_test_results.dir/clean
 
 CMakeFiles/clean_test_results.dir/depend:
-	cd /home/ros/group7/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/ros/group7/src /home/ros/group7/src /home/ros/group7/build /home/ros/group7/build /home/ros/group7/build/CMakeFiles/clean_test_results.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/ga73kec/group7/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/ga73kec/group7/src /home/ga73kec/group7/src /home/ga73kec/group7/build /home/ga73kec/group7/build /home/ga73kec/group7/build/CMakeFiles/clean_test_results.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/clean_test_results.dir/depend
 

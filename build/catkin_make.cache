@@ -1,1 +1,2 @@
-ga73kec_says_hello
+ga73kec_a1_t1:ga73kec_a2_t2:ga73kec_a2_t4:ga73kec_pubsub:ga73kec_says_hello:ga73kec_task_1
+-DCATKIN_DEVEL_PREFIX=/home/ga73kec/group7/devel -DCMAKE_INSTALL_PREFIX=/home/ga73kec/group7/install -G Unix Makefiles

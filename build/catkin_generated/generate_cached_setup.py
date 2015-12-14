@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import print_function
 import argparse
 import os
@@ -18,9 +19,9 @@ except ImportError:
             break
     from catkin.environment_cache import generate_environment_script
 
-code = generate_environment_script('/home/ros/group7/devel/env.sh')
+code = generate_environment_script('/home/ga73kec/group7/devel/env.sh')
 
-output_filename = '/home/ros/group7/build/catkin_generated/setup_cached.sh'
+output_filename = '/home/ga73kec/group7/build/catkin_generated/setup_cached.sh'
 with open(output_filename, 'w') as f:
     #print('Generate script for cached setup "%s"' % output_filename)
     f.write('\n'.join(code))
