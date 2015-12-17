@@ -108,6 +108,8 @@ add_executable(turtlemove src/turtlemove.cpp)
 add_executable(turtlecircle src/turtlecircle.cpp)
 add_executable(turtlefollow_broadcast src/turtlefollow_broadcast.cpp)
 add_executable(turtlefollow_listening src/turtlefollow_listening.cpp)
+add_executable(stopper src/stopper.cpp)
+add_executable(turtlemaze src/turtlemaze.cpp src/fn.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -127,6 +129,14 @@ target_link_libraries(turtlefollow_broadcast
   ${roscpp_LIBRARIES}
 )
 target_link_libraries(turtlefollow_listening
+  ${catkin_LIBRARIES}
+  ${roscpp_LIBRARIES}
+)
+target_link_libraries(stopper
+  ${catkin_LIBRARIES}
+  ${roscpp_LIBRARIES}
+)
+target_link_libraries(turtlemaze
   ${catkin_LIBRARIES}
   ${roscpp_LIBRARIES}
 )
