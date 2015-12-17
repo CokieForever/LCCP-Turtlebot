@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "my_turtle")
+set(my_turtle_MAINTAINER "ros <ros@todo.todo>")
+set(my_turtle_DEPRECATED "")
+set(my_turtle_VERSION "0.0.0")
+set(my_turtle_BUILD_DEPENDS "rosconcole" "roscpp" "rostime" "std_msgs" "geometry_msgs" "message_generation" "turtlesim")
+set(my_turtle_RUN_DEPENDS "rosconcole" "roscpp" "rostime" "std_msgs" "geometry_msgs" "message_runtime" "turtlesim")
+set(my_turtle_BUILDTOOL_DEPENDS "catkin")

@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "turtle_walk")
+set(turtle_walk_MAINTAINER "ros <ros@todo.todo>")
+set(turtle_walk_DEPRECATED "")
+set(turtle_walk_VERSION "0.0.0")
+set(turtle_walk_BUILD_DEPENDS "rosconsole" "roscpp" "rostime" "std_msgs" "geometry_msgs" "message_generation")
+set(turtle_walk_RUN_DEPENDS "rosconsole" "roscpp" "rostime" "std_msgs" "geometry_msgs" "message_runtime")
+set(turtle_walk_BUILDTOOL_DEPENDS "catkin")

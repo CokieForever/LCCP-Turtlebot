@@ -1,0 +1,19 @@
+<launch>
+<node
+	pkg="my_turtle"
+	type="my_turtle_node"
+	name="my_turtle"
+
+
+/>
+<node
+	pkg="turtlesim"
+	type="turtlesim_node"
+	name="turtlesim"
+
+/>
+
+
+
+</launch> 
+	
