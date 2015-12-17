@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "ga59muq_says_hello")
+set(ga59muq_says_hello_MAINTAINER "ga59muq <ga59muq@todo.todo>")
+set(ga59muq_says_hello_DEPRECATED "")
+set(ga59muq_says_hello_VERSION "0.0.0")
+set(ga59muq_says_hello_BUILD_DEPENDS "rosconsole" "roscpp" "rostime")
+set(ga59muq_says_hello_RUN_DEPENDS "rosconsole" "roscpp" "rostime")
+set(ga59muq_says_hello_BUILDTOOL_DEPENDS "catkin")
