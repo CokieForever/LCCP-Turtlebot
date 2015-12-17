@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "tf_demo")
+set(tf_demo_MAINTAINER "ros <ros@todo.todo>")
+set(tf_demo_DEPRECATED "")
+set(tf_demo_VERSION "0.0.0")
+set(tf_demo_BUILD_DEPENDS "rosconcole" "roscpp" "rostime" "std_msgs" "geometry_msgs" "message_generation" "turtlesim" "tf")
+set(tf_demo_RUN_DEPENDS "rosconcole" "roscpp" "rostime" "std_msgs" "geometry_msgs" "message_runtime" "turtlesim" "tf")
+set(tf_demo_BUILDTOOL_DEPENDS "catkin")

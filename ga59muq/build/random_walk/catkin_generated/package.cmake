@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "random_walk")
+set(random_walk_MAINTAINER "ga59muq <ga59muq@todo.todo>")
+set(random_walk_DEPRECATED "")
+set(random_walk_VERSION "0.0.0")
+set(random_walk_BUILD_DEPENDS "roconsole" "roscpp" "rosrun" "std_msgs")
+set(random_walk_RUN_DEPENDS "roconsole" "roscpp" "rosrun" "std_msgs")
+set(random_walk_BUILDTOOL_DEPENDS "catkin")
