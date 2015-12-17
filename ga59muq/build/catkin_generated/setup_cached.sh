@@ -7,12 +7,4 @@
 # new environment variables
 
 # modified environment variables
-export CMAKE_PREFIX_PATH="/home/ga59muq/group7/ga59muq/devel:$CMAKE_PREFIX_PATH"
-export CPATH="/home/ga59muq/group7/ga59muq/devel/include:$CPATH"
-export LD_LIBRARY_PATH="/home/ga59muq/group7/ga59muq/devel/lib:/home/ga59muq/group7/ga59muq/devel/lib/x86_64-linux-gnu:/opt/ros/indigo/lib/x86_64-linux-gnu:/opt/ros/indigo/lib:/opt/ros/indigo/lib/python2.7/dist-packages"
-export PATH="/home/ga59muq/group7/ga59muq/devel/bin:$PATH"
-export PKG_CONFIG_PATH="/home/ga59muq/group7/ga59muq/devel/lib/pkgconfig:/home/ga59muq/group7/ga59muq/devel/lib/x86_64-linux-gnu/pkgconfig:/opt/ros/indigo/lib/x86_64-linux-gnu/pkgconfig:/opt/ros/indigo/lib/pkgconfig"
 export PWD="/home/ga59muq/group7/ga59muq/build"
-export PYTHONPATH="/home/ga59muq/group7/ga59muq/devel/lib/python2.7/dist-packages:$PYTHONPATH"
-export ROSLISP_PACKAGE_DIRECTORIES="/home/ga59muq/group7/ga59muq/devel/share/common-lisp"
-export ROS_PACKAGE_PATH="/home/ga59muq/group7/ga59muq/src:/opt/ros/indigo/share:/opt/ros/indigo/stacks"

@@ -117,6 +117,7 @@ ENDIF(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unsp
 IF(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
   INCLUDE("/home/ga59muq/group7/ga59muq/build/gtest/cmake_install.cmake")
+  INCLUDE("/home/ga59muq/group7/ga59muq/build/ga59muq_says_hello/cmake_install.cmake")
   INCLUDE("/home/ga59muq/group7/ga59muq/build/my_stage/cmake_install.cmake")
   INCLUDE("/home/ga59muq/group7/ga59muq/build/random_walk/cmake_install.cmake")
   INCLUDE("/home/ga59muq/group7/ga59muq/build/turtle_walk/cmake_install.cmake")
