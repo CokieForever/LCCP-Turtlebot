@@ -23,8 +23,8 @@ class MyLittleTurtleMaze
 		ros::NodeHandle& m_node;
 		ros::Publisher m_commandPub;	// Publisher to the robot's velocity command topic
 		ros::Subscriber m_laserSub;		// Subscriber to the robot's laser scan topic
-		bool m_keepMoving;
 		double *m_ranges;
+		bool m_simulation;
 
 		static double modAngle(double rad)
 		{
@@ -142,7 +142,7 @@ class MyLittleTurtleMaze
 		static const double MAX_LINEARSPEED;
 		static const double MAX_ANGULARSPEED;
 
-		MyLittleTurtleMaze(ros::NodeHandle& node): m_keepMoving(true), m_node(node)
+		MyLittleTurtleMaze(ros::NodeHandle& node, bool simulation): m_node(node), m_simulation(simulation)
 		{
 			int nbRanges = ceil(360 / ANGLE_PRECISION);
 			m_ranges = new double[nbRanges];
@@ -150,7 +150,7 @@ class MyLittleTurtleMaze
 			for (int i=0 ; i < nbRanges ; i++)
 				m_ranges[i] = nan("");
 
-			// Subscribe to the simulated robot's laser scan topic
+			// Subscribe to the robot's laser scan topic
 			m_laserSub = m_node.subscribe("/scan", 1, &MyLittleTurtleMaze::scanCallback, this);
 			ROS_INFO("Waiting for laser scan...");
 			ros::Rate rate(10);
@@ -158,7 +158,7 @@ class MyLittleTurtleMaze
 				rate.sleep();
 			checkRosOk_v();
 			
-			// Advertise a new publisher for the simulated robot's velocity command topic
+			// Advertise a new publisher for the robot's velocity command topic
 			m_commandPub = m_node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 10);
 			ROS_INFO("Waiting for a robot to control...");
 			while (ros::ok() && m_commandPub.getNumSubscribers() <= 0)
@@ -223,6 +223,9 @@ class MyLittleTurtleMaze
 					linear = 0;
 				}
 
+				if (!m_simulation)
+					linear = min(linear, 5.0);	//Safety...
+
 				sendMoveOrder(linear, angular);
 
 				rate.sleep();
@@ -249,9 +252,14 @@ int main(int argc, char **argv)
 	ros::NodeHandle node;
 	ROS_INFO("Initialized ROS.");
 
+	bool simulation = true;
+	if (argc > 1 && strcmp(argv[1], "realworld"))
+		simulation = false;
+	ROS_INFO("Mode: %s", simulation ? "Simulation" : "Real world");
+
 	srand(time(0));
 	
-	MyLittleTurtleMaze turtleMaze(node);
+	MyLittleTurtleMaze turtleMaze(node, simulation);
 	turtleMaze.startMoving();
 	
 	ROS_INFO("Bye!");
