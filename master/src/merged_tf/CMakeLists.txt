@@ -106,8 +106,11 @@ include_directories(
 ## Declare a cpp executable
 add_executable(broadcaster_ga59muq ../../../ga59muq/src/tf_demo/src/tf_broadcaster.cpp)
 add_executable(broadcaster_ga35non ../../../ga35non/src/hw2_ga35non/src/turtlefollow_broadcast.cpp)
+add_executable(broadcaster_ga73kec ../../../ga73kec/src/ga73kec_a2_t3_group/src/ga73kec_tf_broadcaster.cpp)
+
 add_executable(listener_ga59muq ../../../ga59muq/src/tf_demo/src/ga59muqlistener.cpp)
 add_executable(listener_ga35non ../../../ga35non/src/hw2_ga35non/src/turtlefollow_listening.cpp)
+add_executable(listener_ga73kec ../../../ga73kec/src/ga73kec_a2_t3_group/src/ga73kec_tf_listener.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -120,10 +123,16 @@ target_link_libraries(broadcaster_ga59muq
 target_link_libraries(broadcaster_ga35non
    ${catkin_LIBRARIES}
 )
+target_link_libraries(broadcaster_ga73kec
+   ${catkin_LIBRARIES}
+)
 target_link_libraries(listener_ga59muq
    ${catkin_LIBRARIES}
 )
 target_link_libraries(listener_ga35non
+   ${catkin_LIBRARIES}
+)
+target_link_libraries(listener_ga73kec
    ${catkin_LIBRARIES}
 )
 
