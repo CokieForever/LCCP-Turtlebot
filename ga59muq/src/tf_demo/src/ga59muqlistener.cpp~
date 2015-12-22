@@ -14,7 +14,6 @@ int	main(int	argc,	char**	argv)	{
         ros::service::waitForService("spawn");
         ros::ServiceClient	add_turtle	=	node.serviceClient<turtlesim::Spawn>("spawn");
         turtlesim::Spawn	srv;
-	srv.request.name = turtle_name1;
         add_turtle.call(srv);
         ros::Publisher	turtle_vel	=	node.advertise<geometry_msgs::Twist>(turtle_name1+"/cmd_vel",	10);
         tf::TransformListener	listener;

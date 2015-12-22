@@ -10,8 +10,8 @@
 	<node pkg="merged_tf" type="broadcaster_ga73kec" name="broadcaster_ga73kec" args="/turtle4" />
 	<node pkg="merged_tf" type="listener_ga73kec" name="listener_ga73kec" args="/turtle4 /turtle3" />
 
-	<node pkg="merged_tf" type="broadcaster_ga76jug" name="broadcaster_ga76jug" args="/turtle5" />
-	<node pkg="merged_tf" type="listener_ga76jug" name="listener_ga76jug" args="/turtle5 /turtle4" />	
+	<node pkg="merged_tf" type="broadcaster_ga76jug" name="broadcaster_ga76jug" args="/turtl" />
+	<node pkg="merged_tf" type="listener_ga76jug" name="listener_ga76jug" args="/turtl /turtle3" />	
 
 	
 	<node pkg="turtlesim" type="turtlesim_node" name="turtlesim_node" />

@@ -107,7 +107,6 @@ include_directories(
 add_executable(broadcaster_ga59muq ../../../ga59muq/src/tf_demo/src/tf_broadcaster.cpp)
 add_executable(broadcaster_ga35non ../../../ga35non/src/hw2_ga35non/src/turtlefollow_broadcast.cpp)
 add_executable(broadcaster_ga73kec ../../../ga73kec/src/ga73kec_a2_t3_group/src/ga73kec_tf_broadcaster.cpp)
-add_executable(broadcaster_ga76jug ../../../ga76jug/src/broadcaster_ga76jug.cpp)
 
 add_executable(listener_ga59muq ../../../ga59muq/src/tf_demo/src/ga59muqlistener.cpp)
 add_executable(listener_ga35non ../../../ga35non/src/hw2_ga35non/src/turtlefollow_listening.cpp)
@@ -125,9 +124,6 @@ target_link_libraries(broadcaster_ga35non
    ${catkin_LIBRARIES}
 )
 target_link_libraries(broadcaster_ga73kec
-   ${catkin_LIBRARIES}
-)
-target_link_libraries(broadcaster_ga76jug
    ${catkin_LIBRARIES}
 )
 target_link_libraries(listener_ga59muq

@@ -15,7 +15,7 @@ void poseCallback(const turtlesim::PoseConstPtr& msg)
 }
 
 int main(int argc, char **argv){
-	ros::init(argc, argv, "my_tf_broadcaster");
+	ros::init(argc, argv, "broadcaster_ga76jug");
 	if(argc != 2)
 	{
 		ROS_ERROR("need turtle name as argument");
