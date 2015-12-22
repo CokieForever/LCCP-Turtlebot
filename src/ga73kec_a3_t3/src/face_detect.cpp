@@ -26,6 +26,8 @@
  RNG rng(12345);
 
  ros::Subscriber sub_img;
+//pointer to cvimage
+ cv_bridge::CvImageConstPtr cv_ptr;
 
  /* save scanned data into capture object */
  void rgbCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -43,35 +45,33 @@
          exit(-1);
      }
 
+
      //-- 2. Read the video stream --- USE ROS KINECT STREAM INSTEAD
-     CvCapture* capture;
      Mat frame;
-
-
-
      if( cv_ptr )
      {
-       while( true )
-       {
+       //while( true )
+       //{
      frame = cv_ptr->image;
 
      //-- 3. Apply the classifier to the frame
          if( !frame.empty() )
          { detectAndDisplay( frame ); }
-         else
-         { printf(" --(!) No captured frame -- Break!"); break; }
+        // else
+         //{ printf(" --(!) No captured frame -- Break!"); break; }
 
-         int c = waitKey(10);
-         if( (char)c == 'c' ) { break; }
-        }
+//         int c = waitKey(10);
+//         if( (char)c == 'c' ) { break; }
+        //}
      }
-     cv::imshow("RGB", cv_ptr->image);
+
+
      cv::waitKey(30); //!!!!!!
  }
 
  void depthCallback(const sensor_msgs::ImageConstPtr& msg)
  {
-     cv_bridge::CvImageConstPtr cv_ptr;
+
      try
      {
          cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_16UC1);
@@ -81,9 +81,12 @@
          ROS_ERROR("cv_bridge exception: %s", ex.what());
          exit(-1);
      }
-     cv::imshow("DEPTH", cv_ptr->image);
+     //cv::imshow("DEPTH", cv_ptr->image);
      cv::waitKey(30);
  }
+
+
+
 
 
  /** @function main */
@@ -93,16 +96,17 @@
      ros::NodeHandle nh;
      ros::Subscriber sub =  nh.subscribe("/camera/rgb/image_rect_color", 1, rgbCallback);
      ros::Subscriber depth =  nh.subscribe("/camera/depth/image", 1, depthCallback);
-
-
-   //-- 1. Load the cascades
-   if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading face_cascade_name \n"); return -1; };
-   if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading eyes_cascade_name \n"); return -1; };
-
+     //-- 1. Load the cascades
+     if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading face_cascade_name \n"); return -1; };
+     if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading eyes_cascade_name \n"); return -1; };
 
    ros::spin();
    return 0;
  }
+
+
+
+
 
 /** @function detectAndDisplay */
 void detectAndDisplay( Mat frame )
@@ -112,7 +116,6 @@ void detectAndDisplay( Mat frame )
 
   cvtColor( frame, frame_gray, CV_BGR2GRAY );
   equalizeHist( frame_gray, frame_gray );
-
   //-- Detect faces
   face_cascade.detectMultiScale( frame_gray, faces, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30) );
 
@@ -134,6 +137,9 @@ void detectAndDisplay( Mat frame )
        circle( frame, center, radius, Scalar( 255, 0, 0 ), 4, 8, 0 );
      }
   }
+
   //-- Show what you got
-  imshow( window_name, frame );
+
+   cv::imshow("Face Detection", frame);
+
  }
