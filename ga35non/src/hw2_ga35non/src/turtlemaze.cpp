@@ -19,13 +19,21 @@ class MyLittleTurtleMaze
 		static const double ANGLE_PRECISION;  //deg
 		static const double MAX_RANGE;
 		static const double EPS_0;
+		static const int NB_CLOUDPOINTS;
 		
 		ros::NodeHandle& m_node;
 		ros::Publisher m_commandPub;	// Publisher to the robot's velocity command topic
 		ros::Subscriber m_laserSub;		// Subscriber to the robot's laser scan topic
 		double *m_ranges;
 		bool m_simulation;
-
+		ros::Time m_time;
+		geometry_msgs::Vector3 m_position;
+		double m_linearSpeed;
+		double m_angularSpeed;
+		geometry_msgs::Vector3 m_targetPoint;
+		Vector *m_cloudPoints;
+		int m_cloudPointsStartIdx;
+		
 		static double modAngle(double rad)
 		{
 			return fmod(fmod(rad, 2*M_PI) + 2*M_PI, 2*M_PI);
@@ -34,10 +42,35 @@ class MyLittleTurtleMaze
 		// Send a velocity command
 		void sendMoveOrder(double lin, double ang)
 		{
+			//lin = 0;
+			//ang = 0;
+			double deltaTime = (ros::Time::now() - m_time).toSec();
+			
+			if (fabs(m_angularSpeed) > 1e-5)
+			{
+				double r = m_linearSpeed / m_angularSpeed;
+				double deltaAngle = m_angularSpeed * deltaTime;
+				double deltaX = r * (1 - cos(deltaAngle));
+				double deltaY = r * sin(deltaAngle);
+				m_position.x += deltaY*cos(m_position.z) - deltaX*sin(m_position.z);
+				m_position.y += deltaY*sin(m_position.z) + deltaX*cos(m_position.z);
+				m_position.z += deltaAngle;
+			}
+			else
+			{
+				m_position.x += m_linearSpeed * deltaTime * cos(m_position.z);
+				m_position.y += m_linearSpeed * deltaTime * sin(m_position.z);
+			}
+
+			m_linearSpeed = lin;
+			m_angularSpeed = ang;
+
 			geometry_msgs::Twist msg; 	// The default constructor will set all commands to 0
 			msg.linear.x = lin;
-			msg.angular.z = ang;
+			msg.angular.z = -ang;
 			m_commandPub.publish(msg);
+
+			m_time = ros::Time::now();
 		}
 
 		// Process the incoming laser scan message
@@ -56,10 +89,23 @@ class MyLittleTurtleMaze
 				}
 				else if (m_ranges[angleIdx] > scan->ranges[i])
 					m_ranges[angleIdx] = scan->ranges[i];
+
+				int cloudPointIdx = (i+m_cloudPointsStartIdx) % NB_CLOUDPOINTS;
+				m_cloudPoints[cloudPointIdx].x = scan->ranges[i] * cos(angle - m_position.z) + m_position.x;
+				m_cloudPoints[cloudPointIdx].y = scan->ranges[i] * sin(angle - m_position.z) + m_position.y;
 			}
+			m_cloudPointsStartIdx += nbRanges;
 		}
 
-		Vector getResultingForce()
+		Vector getResultingForce(bool useCloudPoints=true)
+		{
+			if (useCloudPoints)
+				return getResultingForce_cloudPoints();
+			else
+				return getResultingForce_ranges();
+		}
+
+		Vector getResultingForce_ranges()
 		{
 			int nbRanges = ceil(360 / ANGLE_PRECISION);
 			double angleDelta = ANGLE_PRECISION * M_PI / 180;
@@ -92,7 +138,7 @@ class MyLittleTurtleMaze
 					double d = (d1+d2) / 2;
 					double k = (2*LINEAR_CHARGE*angleDelta) / (4*M_PI*EPS_0*d) * sin(angleDelta/2);
 					field.x += k * cos((a1+a2)/2);
-					field.y -= k * sin((a1+a2)/2);
+					field.y += k * sin((a1+a2)/2);
 				}
 				else
 				{
@@ -103,7 +149,7 @@ class MyLittleTurtleMaze
 					double k1 = r8_ci(fabs(a2+c)) - r8_ci(fabs(a1+c));
 					double k2 = r8_si(fabs(a2+c)) - r8_si(fabs(a1+c));
 					field.x += k * (cos(c)*k1 + sgna*sin(c)*k2);
-					field.y -= k * (sgna*cos(c)*k2 - sin(c)*k1);
+					field.y += k * (sgna*cos(c)*k2 - sin(c)*k1);
 				}
 
 				//ROS_INFO("From a1=%.0f to a2=%.0f, dx=%.f & dy=%.f", a1*180/M_PI, a2*180/M_PI, field.x-field0.x, field.y-field0.y);
@@ -113,6 +159,22 @@ class MyLittleTurtleMaze
 			}
 
 			Vector force = {-field.x * ROBOT_CHARGE, -field.y * ROBOT_CHARGE};
+			return force;
+		}
+
+		Vector getResultingForce_cloudPoints()
+		{
+			Vector force = {0, 0};
+			double k = -ROBOT_CHARGE*CLOUDPOINT_CHARGE / (4*M_PI*EPS_0);
+			for (int i=0 ; i < NB_CLOUDPOINTS ; i++)
+			{
+				if (isnan(m_cloudPoints[i].x) || isnan(m_cloudPoints[i].y))
+					continue;
+				double n = k / (pow(m_cloudPoints[i].x - m_position.x, 2) + pow(m_cloudPoints[i].y - m_position.y, 2));
+				double a = -atan2(m_cloudPoints[i].y - m_position.y, m_cloudPoints[i].x - m_position.x);
+				force.x += n * cos(a);
+				force.y += n * sin(a);
+			}
 			return force;
 		}
 
@@ -137,18 +199,32 @@ class MyLittleTurtleMaze
 		static const double MIN_PROXIMITY_RANGE;
 		static const double ROBOT_CHARGE;
 		static const double LINEAR_CHARGE;
+		static const double CLOUDPOINT_CHARGE;
 		static const double ROBOT_MASS;
 		static const double MAX_RAND_FORCE;
 		static const double MAX_LINEARSPEED;
 		static const double MAX_ANGULARSPEED;
 
-		MyLittleTurtleMaze(ros::NodeHandle& node, bool simulation): m_node(node), m_simulation(simulation)
+		MyLittleTurtleMaze(ros::NodeHandle& node, bool simulation): m_node(node), m_simulation(simulation),
+			m_angularSpeed(0), m_linearSpeed(0), m_cloudPointsStartIdx(0)
 		{
+			m_position.x = 2.0;
+			m_position.y = 2.0;
+			m_position.z = M_PI / 2;
+			
 			int nbRanges = ceil(360 / ANGLE_PRECISION);
 			m_ranges = new double[nbRanges];
 			//TODO exception if m_ranges == NULL
 			for (int i=0 ; i < nbRanges ; i++)
 				m_ranges[i] = nan("");
+
+			m_cloudPoints = new Vector[NB_CLOUDPOINTS];
+			//TODO exception if m_cloudPoints == NULL
+			for (int i=0 ; i < NB_CLOUDPOINTS ; i++)
+			{
+				m_cloudPoints[i].x = nan("");
+				m_cloudPoints[i].y = nan("");
+			}
 
 			// Subscribe to the robot's laser scan topic
 			m_laserSub = m_node.subscribe("/scan", 1, &MyLittleTurtleMaze::scanCallback, this);
@@ -164,26 +240,30 @@ class MyLittleTurtleMaze
 			while (ros::ok() && m_commandPub.getNumSubscribers() <= 0)
 				rate.sleep();
 			checkRosOk_v();
+
+			m_time = ros::Time::now();
 		}
 
 		~MyLittleTurtleMaze()
 		{
 			if (m_ranges != NULL)
 				delete m_ranges;
+			if (m_cloudPoints != NULL)
+				delete m_cloudPoints;
 		}
 
 		void startMoving()
 		{
 			ROS_INFO("Starting movement.");
 			
-			double deltaTime = 1.0;
+			double deltaTime = 5.0;
 			double loopRate = 20.0;
 			ros::Rate rate(loopRate);
 			int mainModulo = round(loopRate * deltaTime);
-			int subModulo = round(loopRate * 2.0);
+			int subModulo = round(loopRate * 5.0);
 
-			double linear = 0.0;
-			double angular = 0.0;
+			ros::Time targetETA;
+			geometry_msgs::Vector3 targetPoint;
 			
 			for (unsigned int i=0 ; ros::ok() ; i++)
 			{
@@ -194,8 +274,8 @@ class MyLittleTurtleMaze
 					Vector randomForce = {0.0, 0.0};
 					if (i % subModulo == 0)
 					{
-						randomForce.x = MAX_RAND_FORCE * (rand() / (double)RAND_MAX);
-						//randomForce.y = MAX_RAND_FORCE * (rand() / (double)RAND_MAX - 0.5);
+						randomForce.x = MAX_RAND_FORCE * (rand() / (double)RAND_MAX - 0.5);
+						randomForce.y = MAX_RAND_FORCE * (rand() / (double)RAND_MAX - 0.5);
 						ROS_INFO("Random force: x=%.3f, y=%.3f", randomForce.x, randomForce.y);
 					}
 
@@ -204,46 +284,67 @@ class MyLittleTurtleMaze
 					Vector force = {electroForce.x + randomForce.x, electroForce.y + randomForce.y};
 
 					Vector acceleration = {force.x / ROBOT_MASS, force.y / ROBOT_MASS};
-					Vector speed = {linear + deltaTime*acceleration.x, deltaTime*acceleration.y};
-					ROS_INFO("Speed: x=%.3f, y=%.3f", speed.x, speed.y);
-				
-					double moveWeight = min(1.0, sqrt(speed.x*speed.x + speed.y*speed.y) / MAX_LINEARSPEED);
-					double turnWeight = atan2(-speed.y, speed.x) / M_PI;
-					ROS_INFO("Weights: l=%.3f, a=%.3f", moveWeight, turnWeight);
-				
-					linear = MAX_LINEARSPEED * moveWeight * pow((1-fabs(turnWeight)), 0.1);
-					angular = MAX_ANGULARSPEED * moveWeight * turnWeight;
+					acceleration.x -= m_linearSpeed * m_angularSpeed * sin(m_position.z);
+					acceleration.y += m_linearSpeed * m_angularSpeed * cos(m_position.z);
+					
+					Vector speed = {m_linearSpeed * cos(m_position.z), m_linearSpeed * sin(m_position.z)};
 
-					ROS_INFO("Move: l=%.3f, a=%.0f", linear, angular * 180 / M_PI);
-				}
-				
-				if (proximityAlert())
-				{
-					ROS_INFO("Proximity alert!");
-					linear = 0;
+					geometry_msgs::Vector3 position = m_position;
+					position.x += acceleration.x * deltaTime*deltaTime/2 + speed.x * deltaTime;
+					position.y += acceleration.y * deltaTime*deltaTime/2 + speed.y * deltaTime;
+					position.z += m_angularSpeed * deltaTime;
+					ROS_INFO("Target position: x=%.3f, y=%.3f", position.x, position.y);
+
+					targetETA = ros::Time::now() + ros::Duration(deltaTime);
+					targetPoint = position;
 				}
 
-				if (!m_simulation)
-					linear = min(linear, 5.0);	//Safety...
-
-				sendMoveOrder(linear, angular);
-
+				goTo(targetPoint, (targetETA - ros::Time::now()).toSec());
 				rate.sleep();
 			}
+		}
+
+		void goTo(const geometry_msgs::Vector3& targetPoint, double remainingTime)
+		{
+			//ROS_INFO("Position: x=%.3f, y=%.3f, z=%.3f", m_position.x, m_position.y, m_position.z*180/M_PI);
+			if (remainingTime <= 0)
+				return;
+
+			//ROS_INFO("Target angle: z=%.3f", atan2(targetPoint.y-m_position.y, targetPoint.x-m_position.x) * 180 / M_PI);
+			double a = modAngle(atan2(targetPoint.y-m_position.y, targetPoint.x-m_position.x) - m_position.z);
+			if (a > M_PI)
+				a -= 2*M_PI;
+			double r = sqrt(pow(targetPoint.x-m_position.x, 2) + pow(targetPoint.y-m_position.y, 2));
+			
+			double angularSpeed = max(min(4.0 * a / remainingTime, MAX_ANGULARSPEED), -MAX_ANGULARSPEED);
+			double linearSpeed = max(min(0.5 * r / remainingTime, MAX_LINEARSPEED), -MAX_LINEARSPEED);
+			
+			//linearSpeed = 1.0;
+			//angularSpeed = 1.0;
+			if (proximityAlert())
+			{
+				ROS_INFO("Proximity alert!");
+				linearSpeed = 0;
+			}
+
+			//ROS_INFO("New order: v=%.3f, w=%.3f", linearSpeed, angularSpeed*180/M_PI);
+			sendMoveOrder(linearSpeed, angularSpeed);
 		}
 };
 
 const double MyLittleTurtleMaze::ANGLE_PRECISION = 1.0; //deg
 const double MyLittleTurtleMaze::EPS_0 = 8.85419e-12;
 const double MyLittleTurtleMaze::MAX_RANGE = 20;
+const int MyLittleTurtleMaze::NB_CLOUDPOINTS = 10000;
 
 const double MyLittleTurtleMaze::ROBOT_CHARGE = 1e-4;
 const double MyLittleTurtleMaze::LINEAR_CHARGE = 1e-5;
+const double MyLittleTurtleMaze::CLOUDPOINT_CHARGE = 1e-8;
 const double MyLittleTurtleMaze::ROBOT_MASS = 0.1;
-const double MyLittleTurtleMaze::MAX_RAND_FORCE = 10;
+const double MyLittleTurtleMaze::MAX_RAND_FORCE = 50;
 const double MyLittleTurtleMaze::MIN_PROXIMITY_RANGE = 0.5; // Should be smaller than sensor_msgs::LaserScan::range_max
-const double MyLittleTurtleMaze::MAX_LINEARSPEED = 15;
-const double MyLittleTurtleMaze::MAX_ANGULARSPEED = M_PI * 5;
+const double MyLittleTurtleMaze::MAX_LINEARSPEED = 0.5;
+const double MyLittleTurtleMaze::MAX_ANGULARSPEED = M_PI/4;
 
 
 int main(int argc, char **argv)
