@@ -52,7 +52,7 @@ void	Walker::scanCallback(const	sensor_msgs::LaserScan::ConstPtr&	scan)
 
 void	Walker::Moving()
 {
-        ros::Rate	rate(10);
+        ros::Rate	rate(100);
 
         //	Keep	spinning	loop	until	user	presses	Ctrl+C	or	the	robot	got	too	close	to	an	obstacle
         while	(ros::ok()	&&	keepMoving)	{

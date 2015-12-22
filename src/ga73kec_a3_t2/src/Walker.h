@@ -6,10 +6,10 @@ public:
                 //	Tunable	parameters
     const static double FORWARD_SPEED_MPS	= 0.2;
 
-    const static double MIN_SCAN_ANGLE_RAD	=+150.0/180*M_PI;
-    const static double MAX_SCAN_ANGLE_RAD	=+210.0/180*M_PI;
+    const static double MIN_SCAN_ANGLE_RAD	= -0.2 + M_PI ;//+150.0/180*M_PI;
+    const static double MAX_SCAN_ANGLE_RAD	= 0.2 + M_PI; //+210.0/180*M_PI;
 
-    const static float MIN_PROXIMITY_RANGE_M=2.0;	//	Should	be	smaller	than	sensor_msgs::LaserScan::range_max
+    const static float MIN_PROXIMITY_RANGE_M=1.0;	//	Should	be	smaller	than	sensor_msgs::LaserScan::range_max
     Walker();
     void	Moving();
 private:
