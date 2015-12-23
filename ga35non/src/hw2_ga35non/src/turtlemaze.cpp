@@ -2,22 +2,217 @@
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/LaserScan.h>
 #include <complex>
+#include <SDL/SDL.h>
+
 #include "utilities.h"
 
 using namespace std;
 
 #include "fn.hpp"
 
+struct Vector
+{
+	double x, y;
+};
+
+class MyLittleDisplay
+{
+	private:
+		static SDL_Color createColor(int r, int g, int b)
+		{
+			SDL_Color color = {r, g, b};
+			return color;
+		}
+
+		//From here: http://stackoverflow.com/questions/11737988/how-to-draw-a-line-using-sdl-without-using-external-libraries
+		static void drawLine(SDL_Surface *surf, float x1, float y1, float x2, float y2, SDL_Color color)
+		{
+			Uint32 pixel = SDL_MapRGB(surf->format, color.r, color.g, color.b);
+
+			SDL_LockSurface(surf);
+
+			//Bresenham's line algorithm
+			const bool steep = (fabs(y2 - y1) > fabs(x2 - x1));
+			if(steep)
+			{
+				swap(x1, y1);
+				swap(x2, y2);
+			}
+
+			if(x1 > x2)
+			{
+				swap(x1, x2);
+				swap(y1, y2);
+			}
+
+			const float dx = x2 - x1;
+			const float dy = fabs(y2 - y1);
+
+			float error = dx / 2.0f;
+			const int ystep = (y1 < y2) ? 1 : -1;
+			int y = (int)y1;
+
+			const int maxX = (int)x2;
+
+			for(int x=(int)x1; x<maxX; x++)
+			{
+				if(steep)
+					putPixel(surf, y,x, pixel);
+				else
+					putPixel(surf, x,y, pixel);
+
+				error -= dy;
+				if(error < 0)
+				{
+					y += ystep;
+					error += dx;
+				}
+			}
+
+			SDL_UnlockSurface(surf);
+		}
+
+		//From SDL documentation
+		static bool putPixel(SDL_Surface *surface, int x, int y, Uint32 pixel, bool check=true)
+		{
+			if (check)
+			{
+				if (x < 0 || y < 0 || x >= surface->w || y >= surface->h)
+					return false;
+			}
+		
+			int bpp = surface->format->BytesPerPixel;
+			/* Here p is the address to the pixel we want to set */
+			Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
+
+			switch(bpp)
+			{
+				case 1:
+					*p = pixel;
+					break;
+
+				case 2:
+					*(Uint16 *)p = pixel;
+					break;
+
+				case 3:
+					if(SDL_BYTEORDER == SDL_BIG_ENDIAN)
+					{
+						p[0] = (pixel >> 16) & 0xff;
+						p[1] = (pixel >> 8) & 0xff;
+						p[2] = pixel & 0xff;
+					}
+					else
+					{
+						p[0] = pixel & 0xff;
+						p[1] = (pixel >> 8) & 0xff;
+						p[2] = (pixel >> 16) & 0xff;
+					}
+					break;
+
+				case 4:
+					*(Uint32 *)p = pixel;
+					break;
+			}
+
+			return true;
+		}
+
+		int m_width;
+		int m_height;
+		double m_maxX;
+		double m_maxY;
+		SDL_Surface *m_screen;
+		SDL_Surface *m_robotSurf;
+		bool m_ok;
+
+		void blitRobot(int x, int y)
+		{
+			SDL_Rect rect;
+			rect.x = x-m_robotSurf->w/2;
+			rect.y = y-m_robotSurf->h/2;
+			SDL_BlitSurface(m_robotSurf, NULL, m_screen, &rect);
+		}
+
+	public:
+		MyLittleDisplay(int w, int h, double maxX=0, double maxY=0): m_width(w), m_height(h), m_maxX(maxX), m_maxY(maxY), m_ok(false)
+		{
+			m_width = max(100, m_width);
+			m_height = max(100, m_height);
+			if (m_maxX <= 0)
+				m_maxX = m_height;
+			if (m_maxY <= 0)
+				m_maxY = m_width;
+			
+			if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+			{
+				ROS_ERROR("Unable to initialize the SDL.");
+				return;
+			}
+
+			m_screen = SDL_SetVideoMode(m_width, m_height, 32, SDL_SWSURFACE);
+			if (!m_screen)
+			{
+				ROS_ERROR("Unable to create display window.");
+				return;
+			}
+			SDL_Flip(m_screen);
+
+			m_robotSurf = SDL_CreateRGBSurface(SDL_HWSURFACE, 20, 20, 32, 0,0,0,0);
+			if (!m_robotSurf)
+			{
+				ROS_ERROR("Unable to create the robot bitmap.");
+				return;
+			}
+			SDL_FillRect(m_robotSurf, NULL, SDL_MapRGB(m_robotSurf->format, 0,0,0));
+
+			m_ok = true;
+		}
+
+		~MyLittleDisplay()
+		{
+			if (m_robotSurf)
+				SDL_FreeSurface(m_robotSurf);
+			SDL_Quit();
+		}
+
+		bool isOK()
+		{
+			return m_ok;
+		}
+
+		void update(Vector pos, Vector speed, Vector acceleration, Vector *cloudPoints, size_t nbPoints, Vector electroForce, Vector randomForce, Vector targetPoint)
+		{
+			if (!m_robotSurf)
+				return;
+			
+			SDL_FillRect(m_screen, NULL, SDL_MapRGB(m_screen->format, 255,255,255));
+
+			double kx = m_width / m_maxY;
+			double ky = m_height / m_maxX;
+			
+			Uint32 black = SDL_MapRGB(m_screen->format, 0,0,0);
+			for (int i=0 ; i < nbPoints ; i++)
+			{
+				if (!isnan(cloudPoints[i].x) && !isnan(cloudPoints[i].y))
+					putPixel(m_screen, cloudPoints[i].y * kx, m_height - cloudPoints[i].x * ky, black);
+			}
+
+			blitRobot(pos.y * kx, m_height - pos.x * ky);
+			drawLine(m_screen, pos.y*kx, m_height-pos.x*ky, (pos.y+speed.y*5)*kx, m_height-(pos.x+speed.x*5)*ky, createColor(0,0,255));
+			drawLine(m_screen, pos.y*kx, m_height-pos.x*ky, (pos.y+acceleration.y*5)*kx, m_height-(pos.x+acceleration.x*5)*ky, createColor(255,0,0));
+			drawLine(m_screen, pos.y*kx, m_height-pos.x*ky, (pos.y+electroForce.y*2)*kx, m_height-(pos.x+electroForce.x*2)*ky, createColor(0,255,0));
+			drawLine(m_screen, pos.y*kx, m_height-pos.x*ky, (pos.y+randomForce.y*2)*kx, m_height-(pos.x+randomForce.x*2)*ky, createColor(0,128,0));
+			drawLine(m_screen, pos.y*kx, m_height-pos.x*ky, targetPoint.y*kx, m_height-targetPoint.x*ky, createColor(255,128,0));
+
+			SDL_Flip(m_screen);
+		}
+};
+
 class MyLittleTurtleMaze
 {
 	private:
-		struct Vector
-		{
-			double x, y;
-		};
-		
 		static const double ANGLE_PRECISION;  //deg
-		static const double MAX_RANGE;
 		static const double EPS_0;
 		static const int NB_CLOUDPOINTS;
 		
@@ -33,6 +228,7 @@ class MyLittleTurtleMaze
 		geometry_msgs::Vector3 m_targetPoint;
 		Vector *m_cloudPoints;
 		int m_cloudPointsStartIdx;
+		MyLittleDisplay m_display;
 		
 		static double modAngle(double rad)
 		{
@@ -42,15 +238,13 @@ class MyLittleTurtleMaze
 		// Send a velocity command
 		void sendMoveOrder(double lin, double ang)
 		{
-			//lin = 0;
-			//ang = 0;
 			double deltaTime = (ros::Time::now() - m_time).toSec();
 			
 			if (fabs(m_angularSpeed) > 1e-5)
 			{
 				double r = m_linearSpeed / m_angularSpeed;
 				double deltaAngle = m_angularSpeed * deltaTime;
-				double deltaX = r * (1 - cos(deltaAngle));
+				double deltaX = fabs(r) * (1 - cos(deltaAngle));
 				double deltaY = r * sin(deltaAngle);
 				m_position.x += deltaY*cos(m_position.z) - deltaX*sin(m_position.z);
 				m_position.y += deltaY*sin(m_position.z) + deltaX*cos(m_position.z);
@@ -80,7 +274,7 @@ class MyLittleTurtleMaze
 			int prevAngleIdx = -1;
 			for (int i=0 ; i < nbRanges ; i++)
 			{
-				double angle = modAngle(scan->angle_min + i * scan->angle_increment);
+				double angle = modAngle(-(scan->angle_min + i * scan->angle_increment));
 				int angleIdx = floor(angle * 180 / (M_PI * ANGLE_PRECISION));
 				if (angleIdx != prevAngleIdx)
 				{
@@ -91,8 +285,8 @@ class MyLittleTurtleMaze
 					m_ranges[angleIdx] = scan->ranges[i];
 
 				int cloudPointIdx = (i+m_cloudPointsStartIdx) % NB_CLOUDPOINTS;
-				m_cloudPoints[cloudPointIdx].x = scan->ranges[i] * cos(angle - m_position.z) + m_position.x;
-				m_cloudPoints[cloudPointIdx].y = scan->ranges[i] * sin(angle - m_position.z) + m_position.y;
+				m_cloudPoints[cloudPointIdx].x = scan->ranges[i] * cos(angle + m_position.z) + m_position.x;
+				m_cloudPoints[cloudPointIdx].y = scan->ranges[i] * sin(angle + m_position.z) + m_position.y;
 			}
 			m_cloudPointsStartIdx += nbRanges;
 		}
@@ -152,8 +346,6 @@ class MyLittleTurtleMaze
 					field.y += k * (sgna*cos(c)*k2 - sin(c)*k1);
 				}
 
-				//ROS_INFO("From a1=%.0f to a2=%.0f, dx=%.f & dy=%.f", a1*180/M_PI, a2*180/M_PI, field.x-field0.x, field.y-field0.y);
-				
 				d1 = d2;
 				a1 = a2;
 			}
@@ -171,7 +363,7 @@ class MyLittleTurtleMaze
 				if (isnan(m_cloudPoints[i].x) || isnan(m_cloudPoints[i].y))
 					continue;
 				double n = k / (pow(m_cloudPoints[i].x - m_position.x, 2) + pow(m_cloudPoints[i].y - m_position.y, 2));
-				double a = -atan2(m_cloudPoints[i].y - m_position.y, m_cloudPoints[i].x - m_position.x);
+				double a = atan2(m_cloudPoints[i].y - m_position.y, m_cloudPoints[i].x - m_position.x);
 				force.x += n * cos(a);
 				force.y += n * sin(a);
 			}
@@ -195,6 +387,15 @@ class MyLittleTurtleMaze
 			return false;
 		}
 
+		void updateDisplay(Vector electroForce, Vector randomForce, geometry_msgs::Vector3 targetPoint)
+		{
+			Vector pos = {m_position.x, m_position.y};
+			Vector speed = {m_linearSpeed * cos(m_position.z), m_linearSpeed * sin(m_position.z)};
+			Vector acceleration = {-m_linearSpeed * m_angularSpeed * sin(m_position.z), m_linearSpeed * m_angularSpeed * cos(m_position.z)};
+			Vector point = {targetPoint.x, targetPoint.y};
+			m_display.update(pos, speed, acceleration, m_cloudPoints, NB_CLOUDPOINTS, electroForce, randomForce, point);
+		}
+
 	public:
 		static const double MIN_PROXIMITY_RANGE;
 		static const double ROBOT_CHARGE;
@@ -206,7 +407,7 @@ class MyLittleTurtleMaze
 		static const double MAX_ANGULARSPEED;
 
 		MyLittleTurtleMaze(ros::NodeHandle& node, bool simulation): m_node(node), m_simulation(simulation),
-			m_angularSpeed(0), m_linearSpeed(0), m_cloudPointsStartIdx(0)
+			m_angularSpeed(0), m_linearSpeed(0), m_cloudPointsStartIdx(0), m_display(512, 512, 10.0, 10.0)
 		{
 			m_position.x = 2.0;
 			m_position.y = 2.0;
@@ -261,17 +462,20 @@ class MyLittleTurtleMaze
 			ros::Rate rate(loopRate);
 			int mainModulo = round(loopRate * deltaTime);
 			int subModulo = round(loopRate * 5.0);
-
+			bool isStuck = false;
+			
 			ros::Time targetETA;
 			geometry_msgs::Vector3 targetPoint;
+			Vector electroForce, randomForce;
 			
-			for (unsigned int i=0 ; ros::ok() ; i++)
+			for (int i=0 ; ros::ok() ; i++)
 			{
 				ros::spinOnce(); // Need to call this function often to allow ROS to process incoming messages
 				
 				if (i % mainModulo == 0)
 				{
-					Vector randomForce = {0.0, 0.0};
+					randomForce.x = 0.0;
+					randomForce.y = 0.0;
 					if (i % subModulo == 0)
 					{
 						randomForce.x = MAX_RAND_FORCE * (rand() / (double)RAND_MAX - 0.5);
@@ -279,7 +483,7 @@ class MyLittleTurtleMaze
 						ROS_INFO("Random force: x=%.3f, y=%.3f", randomForce.x, randomForce.y);
 					}
 
-					Vector electroForce = getResultingForce();
+					electroForce = getResultingForce();
 					ROS_INFO("Electrostatic force: x=%.3f, y=%.3f", electroForce.x, electroForce.y);
 					Vector force = {electroForce.x + randomForce.x, electroForce.y + randomForce.y};
 
@@ -299,18 +503,27 @@ class MyLittleTurtleMaze
 					targetPoint = position;
 				}
 
-				goTo(targetPoint, (targetETA - ros::Time::now()).toSec());
+				if (!goTo(targetPoint, (targetETA - ros::Time::now()).toSec()))
+				{
+					if (!isStuck)
+					{
+						i = -1;
+						isStuck = true;
+					}
+				}
+				else
+					isStuck = false;
+				
+				updateDisplay(electroForce, randomForce, targetPoint);
 				rate.sleep();
 			}
 		}
 
-		void goTo(const geometry_msgs::Vector3& targetPoint, double remainingTime)
+		bool goTo(const geometry_msgs::Vector3& targetPoint, double remainingTime)
 		{
-			//ROS_INFO("Position: x=%.3f, y=%.3f, z=%.3f", m_position.x, m_position.y, m_position.z*180/M_PI);
 			if (remainingTime <= 0)
-				return;
+				return false;
 
-			//ROS_INFO("Target angle: z=%.3f", atan2(targetPoint.y-m_position.y, targetPoint.x-m_position.x) * 180 / M_PI);
 			double a = modAngle(atan2(targetPoint.y-m_position.y, targetPoint.x-m_position.x) - m_position.z);
 			if (a > M_PI)
 				a -= 2*M_PI;
@@ -319,32 +532,33 @@ class MyLittleTurtleMaze
 			double angularSpeed = max(min(4.0 * a / remainingTime, MAX_ANGULARSPEED), -MAX_ANGULARSPEED);
 			double linearSpeed = max(min(0.5 * r / remainingTime, MAX_LINEARSPEED), -MAX_LINEARSPEED);
 			
-			//linearSpeed = 1.0;
-			//angularSpeed = 1.0;
+			bool ok=true;
 			if (proximityAlert())
 			{
 				ROS_INFO("Proximity alert!");
 				linearSpeed = 0;
+				ok = false;
 			}
 
-			//ROS_INFO("New order: v=%.3f, w=%.3f", linearSpeed, angularSpeed*180/M_PI);
 			sendMoveOrder(linearSpeed, angularSpeed);
+			return ok;
 		}
 };
 
 const double MyLittleTurtleMaze::ANGLE_PRECISION = 1.0; //deg
 const double MyLittleTurtleMaze::EPS_0 = 8.85419e-12;
-const double MyLittleTurtleMaze::MAX_RANGE = 20;
-const int MyLittleTurtleMaze::NB_CLOUDPOINTS = 10000;
+const int MyLittleTurtleMaze::NB_CLOUDPOINTS = 1000;
 
-const double MyLittleTurtleMaze::ROBOT_CHARGE = 1e-4;
+const double MyLittleTurtleMaze::ROBOT_CHARGE = 5e-6;
 const double MyLittleTurtleMaze::LINEAR_CHARGE = 1e-5;
 const double MyLittleTurtleMaze::CLOUDPOINT_CHARGE = 1e-8;
-const double MyLittleTurtleMaze::ROBOT_MASS = 0.1;
-const double MyLittleTurtleMaze::MAX_RAND_FORCE = 50;
+const double MyLittleTurtleMaze::ROBOT_MASS = 1.0;
+const double MyLittleTurtleMaze::MAX_RAND_FORCE = 1;
 const double MyLittleTurtleMaze::MIN_PROXIMITY_RANGE = 0.5; // Should be smaller than sensor_msgs::LaserScan::range_max
 const double MyLittleTurtleMaze::MAX_LINEARSPEED = 0.5;
 const double MyLittleTurtleMaze::MAX_ANGULARSPEED = M_PI/4;
+
+
 
 
 int main(int argc, char **argv)
