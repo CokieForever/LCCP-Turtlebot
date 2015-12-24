@@ -1,0 +1,14 @@
+<launch>	
+  	  
+  
+	
+  	
+  <node	
+ name="robot_walker"	
+  pkg="random_walk"	
+  type="random_walk_node"	
+  
+output="screen"/>	
+  	
+  
+</launch>

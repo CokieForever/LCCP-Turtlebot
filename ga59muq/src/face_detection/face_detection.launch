@@ -1,0 +1,14 @@
+<launch>	
+  	  
+  
+	
+  	
+  <node	
+ name="face_detect"	
+  pkg="face_detection"	
+  type="face_detection_node"	
+  
+output="screen"/>	
+  	
+  
+</launch>
