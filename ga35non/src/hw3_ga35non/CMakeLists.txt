@@ -105,6 +105,7 @@ include_directories(
 # )
 
 ## Declare a cpp executable
+add_executable(turtlemaze_real ../hw2_ga35non/src/turtlemaze.cpp ../hw2_ga35non/src/fn.cpp)
 add_executable(facedetector src/facedetector.cpp)
 add_executable(imagebroadcast src/imagebroadcast.cpp)
 
@@ -113,6 +114,10 @@ add_executable(imagebroadcast src/imagebroadcast.cpp)
 # add_dependencies(hw3_ga35non_node hw3_ga35non_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
+target_link_libraries(turtlemaze_real
+  ${catkin_LIBRARIES}
+  SDL
+)
 target_link_libraries(facedetector
   ${catkin_LIBRARIES}
 )
