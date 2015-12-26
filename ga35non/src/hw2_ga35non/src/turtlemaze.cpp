@@ -244,10 +244,8 @@ class MyLittleTurtleMaze
 			{
 				double r = m_linearSpeed / m_angularSpeed;
 				double deltaAngle = m_angularSpeed * deltaTime;
-				double deltaX = fabs(r) * (1 - cos(deltaAngle));
-				double deltaY = r * sin(deltaAngle);
-				m_position.x += deltaY*cos(m_position.z) - deltaX*sin(m_position.z);
-				m_position.y += deltaY*sin(m_position.z) + deltaX*cos(m_position.z);
+				m_position.x += r * (sin(deltaAngle + m_position.z) - sin(m_position.z));
+				m_position.y -= r * (cos(deltaAngle + m_position.z) - cos(m_position.z));
 				m_position.z += deltaAngle;
 			}
 			else
