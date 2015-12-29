@@ -22,22 +22,21 @@
  String eyes_cascade_name = ros::package::getPath("ga73kec_a3_t3") + "/src/resources/haarcascade_eye_tree_eyeglasses.xml";
  CascadeClassifier face_cascade;
  CascadeClassifier eyes_cascade;
- string window_name = "Capture - Face detection";
+
  RNG rng(12345);
 
  ros::Subscriber sub_img;
 //pointer to cvimage
- cv_bridge::CvImageConstPtr cv_ptr;
+cv_bridge::CvImageConstPtr cv_ptr;
 
  /* save scanned data into capture object */
  void rgbCallback(const sensor_msgs::ImageConstPtr& msg)
  {
 
-     cv_bridge::CvImageConstPtr cv_ptr;
+    // cv_bridge::CvImageConstPtr cv_ptr;
      try
      {
        cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-
      }
      catch (cv_bridge::Exception& ex)
      {
@@ -45,33 +44,23 @@
          exit(-1);
      }
 
-
      //-- 2. Read the video stream --- USE ROS KINECT STREAM INSTEAD
      Mat frame;
      if( cv_ptr )
      {
-       //while( true )
-       //{
-     frame = cv_ptr->image;
-
+        frame = cv_ptr->image;
      //-- 3. Apply the classifier to the frame
          if( !frame.empty() )
-         { detectAndDisplay( frame ); }
-        // else
-         //{ printf(" --(!) No captured frame -- Break!"); break; }
+         {
+             detectAndDisplay( frame );
+         }
 
-//         int c = waitKey(10);
-//         if( (char)c == 'c' ) { break; }
-        //}
      }
-
-
      cv::waitKey(30); //!!!!!!
  }
 
  void depthCallback(const sensor_msgs::ImageConstPtr& msg)
  {
-
      try
      {
          cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_16UC1);
@@ -81,13 +70,8 @@
          ROS_ERROR("cv_bridge exception: %s", ex.what());
          exit(-1);
      }
-     //cv::imshow("DEPTH", cv_ptr->image);
      cv::waitKey(30);
  }
-
-
-
-
 
  /** @function main */
  int main( int argc, char** argv )
@@ -103,10 +87,6 @@
    ros::spin();
    return 0;
  }
-
-
-
-
 
 /** @function detectAndDisplay */
 void detectAndDisplay( Mat frame )
@@ -137,9 +117,6 @@ void detectAndDisplay( Mat frame )
        circle( frame, center, radius, Scalar( 255, 0, 0 ), 4, 8, 0 );
      }
   }
-
   //-- Show what you got
-
    cv::imshow("Face Detection", frame);
-
  }
