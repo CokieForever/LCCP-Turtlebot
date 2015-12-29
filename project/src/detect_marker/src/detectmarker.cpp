@@ -8,7 +8,7 @@ DetectMarker::DetectMarker()
 
 void DetectMarker::publishMarker()
 {
-    pub.publish(ui8_markers.marker);
+    pub.publish(ui8_markers);
 }
 
 void DetectMarker::rgbCallback(const sensor_msgs::ImageConstPtr& msg)
