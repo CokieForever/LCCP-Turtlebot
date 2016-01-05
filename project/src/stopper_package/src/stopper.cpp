@@ -78,19 +78,19 @@ void Stopper::startMoving()
 }
 
 //Callback function for incoming Marker msgs. Checks the detected MarkerIDs and compare it to the next wanted ID.
-void markerCallback(const detect_marker::Markers::ConstPtr& markers_msg)
+void Stopper::markerCallback(const detect_marker::Markers::ConstPtr& markers_msg)
 {
 	int highestMarkerId = 0;
 	
-	for(int i=0; i<8, i++)
+    for(int i=0; i<8; i++)
 	{
-        if((marker_msg->marker[i] > highestMarkerId) && (marker_msg->marker[i]!=8))
+        if((markers_msg->marker[i] > highestMarkerId) && (markers_msg->marker[i]!=8))
         {
-            highestMarkerId = marker_msg->marker[i];
+            highestMarkerId = markers_msg->marker[i];
         }
 	}
 	
-	if(highestMarker == nextId && !keepMoving)
+    if(highestMarkerId == nextId && !keepMoving)
     {
         nextId =+ 1;
         ROS_INFO("next ID is now %d", nextId);
@@ -98,7 +98,7 @@ void markerCallback(const detect_marker::Markers::ConstPtr& markers_msg)
 }		
 
 //Callback function for the bumper event. Stops the forward movement and iniates an rotation
-void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg)
+void Stopper::bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg)
 {
     ROS_INFO("You just get bumped!");
     keepMoving=false;

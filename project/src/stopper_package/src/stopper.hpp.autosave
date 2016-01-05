@@ -26,6 +26,6 @@ class Stopper
 		void moveForward();
 		void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan);
         void rotate();
-        void markerCallback(const detect_marker::Markers::ConstPtr& marker_msg);
+        void markerCallback(const detect_marker::Markers::ConstPtr& markers_msg);
         void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg);
 };
