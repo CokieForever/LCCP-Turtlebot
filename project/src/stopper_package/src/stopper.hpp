@@ -1,6 +1,7 @@
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
-//#include "detect_marker/Markers.h"
+#include "detect_marker/Markers.h"
+#include "kobuki_msgs/BumperEvent.h"
 class Stopper
 {
 	public://Tunable parameters
@@ -17,12 +18,14 @@ class Stopper
 		ros::NodeHandle	node;
 		ros::Publisher commandPub;	//	Publisher to the robot's velocity command topic	
 		ros::Subscriber	laserSub;	// Subscriber to the robot's laser scan topic
-		ros::Subscriber markerId;
-  
+        ros::Subscriber markerId;   // Subscriber to the detect_markers topic including the founded aruco-markers
+        ros::Subscriber bumper;     // Subscriber to the robot's bumber event topic
+
 		bool keepMoving; //Indicates wether the robot should continue moving
-		int nextId;
+        int  nextId;
 		void moveForward();
 		void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan);
         void rotate();
-	//	void markerCallback(const detect_marker::Markers::ConstPtr& markers_msg);
+        void markerCallback(const detect_marker::Markers::ConstPtr& markers_msg);
+        void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg);
 };

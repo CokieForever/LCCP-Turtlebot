@@ -111,14 +111,13 @@ catkin_package(
 # include_directories(include)
 
 ## Declare a C++ library
-# add_library(stopper_package
-#   src/${PROJECT_NAME}/stopper_package.cpp
+# add_library(stopper_package ../detect_marker/src/${detect_marker}/stopper_package.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(stopper_package ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(detect_marker ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 # add_executable(stopper_package_node src/stopper_package_node.cpp)
