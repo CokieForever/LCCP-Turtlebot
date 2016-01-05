@@ -45,7 +45,6 @@ void Stopper::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 		}
     }
 
-    ROS_INFO("%f", closestRange);
 	if(closestRange<MIN_PROXIMITY_RANGE_M)	
 	{
         ROS_INFO("Obstacle!");
@@ -84,8 +83,9 @@ void Stopper::markerCallback(const detect_marker::Markers::ConstPtr& markers_msg
 	
     for(int i=0; i<8; i++)
 	{
-        if((markers_msg->marker[i] > highestMarkerId) && (markers_msg->marker[i]!=8))
+        if((markers_msg->marker[i] >= highestMarkerId) && (markers_msg->marker[i]!=8))
         {
+            ROS_INFO("Marker content: %d", markers_msg->marker[i] );
             highestMarkerId = markers_msg->marker[i];
         }
 	}

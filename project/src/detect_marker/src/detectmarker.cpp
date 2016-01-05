@@ -27,6 +27,10 @@ void DetectMarker::rgbCallback(const sensor_msgs::ImageConstPtr& msg)
     aruco::MarkerDetector detector;
     std::vector<aruco::Marker> detMarker;
 
+
+    for (int i=0; i<8; i++)
+         ui8_markers.marker[i] = 8;
+
     detector.detect(cv_ptr->image,detMarker);
 
     ROS_INFO("Amount of markers: %ld", detMarker.size());
