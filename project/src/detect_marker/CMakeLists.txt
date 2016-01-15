@@ -10,8 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   cv_bridge
   sensor_msgs
-image_transport
-message_generation
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -46,11 +45,11 @@ message_generation
 ##     and list every .msg/.srv/.action file to be processed
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
- add_message_files(
-   FILES
-   Markers.msg
-#   Message2.msg
- )
+add_message_files(
+  FILES
+  MarkersInfos.msg
+  MarkerInfo.msg
+)
 generate_messages(
   DEPENDENCIES
   std_msgs
@@ -149,12 +148,8 @@ include_directories(
 # target_link_libraries(detect_marker_node
 #   ${catkin_LIBRARIES}
 # )
-add_executable(detect_marker src/detect.cpp
-                             src/detectmarker.cpp)
- target_link_libraries(detect_marker
-   ${catkin_LIBRARIES}
-${OpenCV_LIBS}
- )
+add_executable(detect_marker src/detect.cpp src/detectmarker.cpp)
+target_link_libraries(detect_marker ${catkin_LIBRARIES} ${OpenCV_LIBS})
 #############
 ## Install ##
 #############

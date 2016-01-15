@@ -1,79 +1,131 @@
+#include "aruco/aruco.h"
+#include "cv_bridge/cv_bridge.h"
+#include <sensor_msgs/image_encodings.h>
+
 #include "detectmarker.h"
+#include "detect_marker/MarkerInfo.h"
+#include "detect_marker/MarkersInfos.h"
 
-DetectMarker::DetectMarker()
+DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle)
 {
-    pub = nh.advertise<detect_marker::Markers>("/int8_marker_ids", 10);
-    sub =  nh.subscribe("/camera/rgb/image_raw", 1, &DetectMarker::rgbCallback, this);
-    vectorSub = nh.subscribe("/ar_multi_boards/position",1, &DetectMarker::vectorDetectCallback, this);
-    nextId = 0;
+    ROS_INFO("Subscribing to camera image topic...");
+    m_cameraSub = m_nodeHandle.subscribe("/camera/rgb/image_raw", 1, &DetectMarker::cameraSubCallback, this);
+    ros::Rate loopRate(10);
+	while (ros::ok() && m_cameraSub.getNumPublishers() <= 0)
+        loopRate.sleep();
+
+    ROS_INFO("Creating markers topic...");
+    m_markersPub = m_nodeHandle.advertise<detect_marker::MarkersInfos>("/markerinfo", 10);
+    /*while (ros::ok() && m_markersPub.getNumSubscribers() <= 0)
+        loopRate.sleep();*/
+    
+    ROS_INFO("Done, everything's ready.");
 }
 
-void DetectMarker::vectorDetectCallback(const geometry_msgs::Vector3StampedPtr &msg)
+void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-    cout << "[" << msg->vector.x << "," << msg->vector.y << "," << msg->vector.z << "]" << endl;
-}
+    ROS_INFO("Received image from camera.");
 
-
-void DetectMarker::publishMarker()
-{
-    pub.publish(ui8_markers);
-}
-
-void DetectMarker::rgbCallback(const sensor_msgs::ImageConstPtr& msg)
-{
-
-   // cv_bridge::CvImageConstPtr cv_ptr;
+    cv::Mat img;
     try
     {
-      DetectMarker::cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+        cv_bridge::CvImageConstPtr imgPtr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+        if (imgPtr == NULL)
+        {
+            ROS_WARN("Received NULL image.");
+            return;
+        }
+        img = imgPtr->image;
     }
     catch (cv_bridge::Exception& ex)
     {
         ROS_ERROR("cv_bridge exception: %s", ex.what());
         exit(-1);
     }
-    aruco::MarkerDetector detector;
-    std::vector<aruco::Marker> detMarker;
 
-    cv::Scalar colorScalar(255,155,0, 0);
-    cv::Mat frame = cv_ptr->image;
-
-    for (int i=0; i<8; i++)
-         ui8_markers.marker[i] = 8;
-
-    detector.detect(cv_ptr->image,detMarker);
-
-
-    ROS_INFO("Amount of markers: %ld", detMarker.size());
-
-    for (int i=0; i<detMarker.size(); i++)
+    int width = img.cols;
+    int height = img.rows;
+    int channels = img.channels();
+    ROS_INFO("Image size: %dx%dx%d", width, height, channels);
+    if (img.cols <= 0 || img.rows <= 0)
     {
-        //if (detMarker[i].id == nextId)
+        ROS_WARN("Received emtpy / unconventional image.");
+        return;
+    }
+    
+    aruco::MarkerDetector detector;
+    std::vector<aruco::Marker> markers;
+    
+    cv::Scalar colorScalar(255,155,0, 0);
+    detector.detect(img, markers);
+
+    int nbMarkers = markers.size();
+    ROS_INFO("Amount of markers: %d", nbMarkers);
+
+    detect_marker::MarkersInfos markersInfos;
+    cv::Mat frame = img;
+    for (int i=0 ; i < nbMarkers ; i++)
+    {
+        aruco::Marker& marker = markers[i];
+        marker.draw(frame, colorScalar);
+
+        Point center;
+        Point corners[4];
+        for (int j=0 ; j < 4 ; j++)
         {
-            DetectMarker::publishMarker();
-            detMarker[i].draw(frame, colorScalar);
-
-            //detMarker[i].calculateExtrinsics(detMarker[i].getArea(),frame);
-
-            aruco::MarkerInfo(detMarker[i].id);
-
-
-
-            nextId++;
+            corners[j].x = marker[j].x;
+            corners[j].y = marker[j].y;
+        }
+        
+        if (!ComputerQuadrilateralCenter(corners, &center))
+            ROS_WARN("Unable to computer center.");
+        else
+        {
+            detect_marker::MarkerInfo markerInfo;
+            markerInfo.x = 2*(center.x/(double)width)-1;
+            markerInfo.y = 2*(center.y/(double)height)-1;
+            markerInfo.id = marker.id;
+            markersInfos.infos.push_back(markerInfo);
         }
     }
+    
+    ROS_INFO("Publishing %lu marker infos.", markersInfos.infos.size());
+    m_markersPub.publish(markersInfos);
 
-    //marker.draw(cv_ptr->image, cv::Scalar(190, 10, 111),1, true);
-    //ROS_INFO("Area %f", marker.getArea());
-    cv::imshow("Marker Detection",frame);
-    cv::waitKey(30); //!!!!!!
+    cv::imshow("Marker Detection", frame);
+    cv::waitKey(1);
 }
-void DetectMarker::Detection()
+
+bool DetectMarker::ComputeLinesIntersection(Point linePoints1[2], Point linePoints2[2], Point *isectPoint)
 {
-    ros::Rate   rate(100);
-    while (ros::ok())
-    {
-        ros::spinOnce();
-        rate.sleep();
-    }
+    double x1 = linePoints1[0].x;
+    double x2 = linePoints1[1].x;
+    double y1 = linePoints1[0].y;
+    double y2 = linePoints1[1].y;    
+
+    double x3 = linePoints2[0].x;
+    double x4 = linePoints2[1].x;
+    double y3 = linePoints2[0].y;
+    double y4 = linePoints2[1].y;    
+
+    double d = (x1-x2)*(y3-y4) - (y1-y2)*(x3-x4);
+    if (fabs(d) < 1e-6)
+        return false;
+
+    isectPoint->x = ((x1*y2 - y1*x2) * (x3-x4) - (x1-x2) * (x3*y4 - y3*x4)) / d;
+    isectPoint->y = ((x1*y2 - y1*x2) * (y3-y4) - (y1-y2) * (x3*y4 - y3*x4)) / d;
+    return true;
+}
+
+bool DetectMarker::ComputerQuadrilateralCenter(Point points[4], Point *centerPoint)
+{
+    Point linePoints1[2] = {points[0], points[2]};
+    Point linePoints2[2] = {points[1], points[3]};
+    return ComputeLinesIntersection(linePoints1, linePoints2, centerPoint);
+}
+
+void DetectMarker::Detect()
+{
+    ROS_INFO("Starting detection.");
+    ros::spin();
 }
