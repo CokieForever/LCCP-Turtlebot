@@ -78,7 +78,7 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
         }
         
         if (!ComputerQuadrilateralCenter(corners, &center))
-            ROS_WARN("Unable to computer center.");
+            ROS_WARN("Unable to compute center.");
         else
         {
             detect_marker::MarkerInfo markerInfo;
@@ -86,6 +86,8 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
             markerInfo.y = 2*(center.y/(double)height)-1;
             markerInfo.id = marker.id;
             markersInfos.infos.push_back(markerInfo);
+
+            ROS_INFO("Marker %d: (%.3f, %.3f)", markerInfo.id, markerInfo.x, markerInfo.y);
         }
     }
     
