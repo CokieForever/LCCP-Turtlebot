@@ -139,6 +139,7 @@ target_link_libraries(stopper
 target_link_libraries(turtlemaze
   ${catkin_LIBRARIES}
   ${roscpp_LIBRARIES}
+  SDL
 )
 
 #############
