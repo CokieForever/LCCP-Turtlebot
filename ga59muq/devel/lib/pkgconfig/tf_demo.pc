@@ -1,0 +1,8 @@
+prefix=/home/ga59muq/group7/ga59muq/devel
+
+Name: tf_demo
+Description: Description of tf_demo
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/ga59muq/group7/ga59muq/devel/lib 
+Requires: 

@@ -3,4 +3,5 @@ devel/
 
 .catkin_workspace
 *.user
+
 *~

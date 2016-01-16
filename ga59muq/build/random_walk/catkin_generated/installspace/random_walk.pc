@@ -1,0 +1,8 @@
+prefix=/home/ga59muq/group7/ga59muq/install
+
+Name: random_walk
+Description: Description of random_walk
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/ga59muq/group7/ga59muq/install/lib 
+Requires: 
