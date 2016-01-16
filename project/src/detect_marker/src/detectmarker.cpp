@@ -53,7 +53,8 @@ void DetectMarker::rgbCallback(const sensor_msgs::ImageConstPtr& msg)
             DetectMarker::publishMarker();
             detMarker[i].draw(frame, colorScalar);
 
-            //detMarker[i].calculateExtrinsics(detMarker[i].getArea(),frame);
+            detMarker[i].calculateExtrinsics(detMarker[i].getArea(),frame);
+
 
             aruco::MarkerInfo(detMarker[i].id);
 
