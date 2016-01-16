@@ -1,0 +1,52 @@
+// This program publishes velocity
+// messages for turtlesim.
+#include <ros/ros.h>
+#include <turtlesim/Pose.h> 
+#include <geometry_msgs/Twist.h> // For geometry_msgs::Twist
+#include <stdlib.h> // For rand () and RAND_MAX
+
+turtlesim::Pose turtle1_pose, ga76jug_pose;
+
+ga76jug.x = 2;
+ga76jug.y = 4;
+ga76jug.theta = 0;
+
+
+
+void posecallback(void)
+{
+	
+
+int main(int argc, char **argv)
+{
+  ros::init(argc, argv, "turtle_mover");
+  ros::NodeHandle n;
+
+  
+  ros::Publisher moveTurtle1Pub = n.advertise<geometry_msgs::Twist>("turtle1/cmd_vel", 1000);
+  ros::Publisher moveGa76jugPub = n.advertise<geometry_msgs::Twist>("ga76jug/cmd_vel", 1000);
+  ros::Subscriber subGa76jugPose = n.subscribe("ga76jug/pose", 1000, &posecallback);
+  ros::Subscriber subTurtle1Pose = n.subscribe("turtle1/pose", 1000, &posecallback);
+  srand(time(0));
+
+  ros::Rate loop_rate(100); /* set loopRate to 100 so that the spinOnce() and therefore the Callback function will 				       be called more once in 2 seconds and the achievment of the startpos is noticed early 				       enough */
+
+
+  while (ros::ok())
+  {
+    	/**
+     	* This is a message object. You stuff it with data, and then publish it.
+     	*/
+	geometry_msgs::Twist msg;
+    	msg.linear.x = 1.0;
+    	msg.angular.z = 1.5708/2.0;
+
+	moving_pub.publish(msg);
+
+    	ROS_INFO_STREAM("linear="<< msg.linear.x << "angular=" << msg.angular.z);
+
+	loop_rate.sleep();
+    	++count;
+  }
+  return 0;
+}
