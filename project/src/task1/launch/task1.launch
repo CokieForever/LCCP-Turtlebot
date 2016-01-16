@@ -1,0 +1,4 @@
+<launch>
+	<node pkg="task1" type="detect_marker_node" name="detect_marker_ga73kec"/>
+	<node pkg="task1" type="stopper_node" name="stopper_ga76jug" output="screen" />
+</launch>
