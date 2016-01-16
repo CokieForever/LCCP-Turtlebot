@@ -1,14 +1,15 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(ga76jug_says_hello)
+project(movement)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  rosconsole
-  roscpp
-  rostime
-)
+find_package(catkin REQUIRED roscpp tf cv_bridge
+  std_msgs
+  cv_bridge
+  sensor_msgs
+  image_transport
+  message_generation)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -101,8 +102,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES ga76jug_says_hello
-#  CATKIN_DEPENDS rosconsole roscpp rostime
+#  LIBRARIES movement
+#  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
 
@@ -113,33 +114,26 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-)
 
 ## Declare a C++ library
-# add_library(ga76jug_says_hello
-#   src/${PROJECT_NAME}/ga76jug_says_hello.cpp
+# add_library(movement
+#   src/${PROJECT_NAME}/movement.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(ga76jug_says_hello ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(movement ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-# add_executable(ga76jug_says_hello_node src/ga76jug_says_hello_node.cpp)
-#  add_executable(hello_world_2 src/hello_world_2.cpp)
+add_executable(mover src/movement.cpp src/run_mover)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(ga76jug_says_hello_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(movement_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(ga76jug_says_hello_node
-#   ${catkin_LIBRARIES}
-# )
-#target_link_libraries(hello_world_2 ${catkin_LIBRARIES})
+target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 #############
 ## Install ##
@@ -156,7 +150,7 @@ include_directories(
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS ga76jug_says_hello ga76jug_says_hello_node
+# install(TARGETS movement movement_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -181,7 +175,7 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_ga76jug_says_hello.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_movement.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
