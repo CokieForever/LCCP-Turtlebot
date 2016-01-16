@@ -1,0 +1,4 @@
+<launch>
+	<node pkg="detect_marker" type="detect_marker" name="detect_marker_ga73kec"/>
+	<node pkg="stopper_package" type="stopper" name="stopper_ga76jug" />
+</launch>
