@@ -1,4 +1,0 @@
-<launch>
-	<node name="turtlemove" pkg="hw2_ga35non" type="turtlemove" />
-	<node name="turtlesim_node" pkg="turtlesim" type="turtlesim_node" />
-</launch>

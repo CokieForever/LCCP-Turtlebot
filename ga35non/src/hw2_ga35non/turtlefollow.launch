@@ -1,0 +1,6 @@
+<launch>
+	<node name="turtlefollow_broadcast" pkg="hw2_ga35non" type="turtlefollow_broadcast" args="turtle1 turtle2 turtle3" />
+	<node name="turtlefollow_listening" pkg="hw2_ga35non" type="turtlefollow_listening" args="turtle1 turtle2 turtle3" />
+	<node name="turtlesim_node" pkg="turtlesim" type="turtlesim_node" />
+	<node name="turtle_teleop_key" pkg="turtlesim" type="turtle_teleop_key" />
+</launch>
