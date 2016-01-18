@@ -56,6 +56,7 @@ void rotateTurtlebot()
     vel_msg.linear.x = 0.2;
     publish(vel_msg);
     // jump into a callback function, in case there is a message coming...
+
     ros::spinOnce();
     rate.sleep();
   }
