@@ -150,6 +150,8 @@ include_directories(
 # )
 add_executable(detect_marker src/detect.cpp src/detectmarker.cpp)
 target_link_libraries(detect_marker ${catkin_LIBRARIES} ${OpenCV_LIBS})
+add_executable(camrecord src/camrecord.cpp)
+target_link_libraries(camrecord ${catkin_LIBRARIES} ${OpenCV_LIBS})
 #############
 ## Install ##
 #############
