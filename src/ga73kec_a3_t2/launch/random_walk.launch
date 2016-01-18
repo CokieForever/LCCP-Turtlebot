@@ -1,0 +1,15 @@
+<launch>
+
+
+
+ 
+
+
+  <node
+ name="Walker"
+  pkg="ga73kec_a3_t2"
+  type="Walker"
+output="screen"/>
+
+
+</launch>
