@@ -27,22 +27,22 @@ void markerDetectCallback(const detect_marker::Markers::ConstPtr& marker_msg)
   if (f_Xm < 0)
   {
     //rotate bot to the right
-    e_Direction = right;
-    m_angularVelocity = 0.1;
-    rotateTurtlebot();
-  }
-  else
-    if (e_Direction != left) m_angularVelocity = 0;
-
-  if (f_Xm > 0)
-  {
-    //rotate bot to the left
     e_Direction = left;
     m_angularVelocity = -0.1;
     rotateTurtlebot();
   }
   else
     if (e_Direction != right) m_angularVelocity = 0;
+
+  if (f_Xm > 0)
+  {
+    //rotate bot to the left
+    e_Direction =  right;
+    m_angularVelocity = +0.1;
+    rotateTurtlebot();
+  }
+  else
+    if (e_Direction != left) m_angularVelocity = 0;
 }
 
 //rotation of the turtlebot - Alex
@@ -54,7 +54,7 @@ void rotateTurtlebot()
     geometry_msgs::Twist vel_msg;
     vel_msg.angular.z = m_angularVelocity;
     vel_msg.linear.x = 0.2;
-    publish(vel_msg);
+    commandPub.publish(vel_msg);
     // jump into a callback function, in case there is a message coming...
 
     ros::spinOnce();
