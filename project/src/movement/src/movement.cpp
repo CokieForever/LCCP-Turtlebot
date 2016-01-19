@@ -107,6 +107,7 @@ void Mover::rotateOdom(double angle)
   //bool needed to check if while loop has already passed first time
   bool runFirstTime = true;
 
+  ros::Rate rate2(10);
   //Run loop until rotation has been done
   while (!done && node.ok())
     {
@@ -152,6 +153,9 @@ void Mover::rotateOdom(double angle)
           keepMoving=true;
           runFirstTime =true;
         }
+      ROS_INFO("BEFORE SPINONCE");
+      //ros::spinOnce();
+      //rate2.sleep();
     }
 }
 
@@ -229,34 +233,35 @@ void Mover::rotateTurtlebot()
   }
 }
 
-void Mover::getLocationCallback(const geometry_msgs::Vector3StampedConstPtr &marker_msg)
+void Mover::getLocationCallback(const detect_marker::MarkerInfo marker_msg)
 {
+    ROS_INFO("location callback!");
     //map the coordiante to the center
-    float f_Xm = marker_msg->x - 320;
-    enum e_Direction { left , right};
-
+    float f_Xm = marker_msg.x - 320;
+    enum e_Direction { left , right} edir;
+    ROS_INFO("Location of marker: %f", marker_msg.x);
     if (!reachedTarget)
     {
         //adjust robot, so the marker actually is in the center
         if (f_Xm < 0)
         {
           //rotate bot to the right
-          e_Direction = left;
+          edir = left;
           m_angularVelocity = -0.1;
           rotateTurtlebot();
         }
         else
-          if (e_Direction != right) m_angularVelocity = 0;
+          if (edir != right) m_angularVelocity = 0;
 
         if (f_Xm > 0)
         {
           //rotate bot to the left
-          e_Direction =  right;
+          edir =  right;
           m_angularVelocity = +0.1;
           rotateTurtlebot();
         }
         else
-          if (e_Direction != left) m_angularVelocity = 0;
+          if (edir != left) m_angularVelocity = 0;
     }
 }
 
@@ -280,7 +285,7 @@ void Mover::moveRandomly()
   driveForwardOdom(randDist);
 
   ROS_INFO("Look around");
-  rotateOdom(358);
+ //rotateOdom(358);
   ROS_INFO("Found nothing");
 }
 

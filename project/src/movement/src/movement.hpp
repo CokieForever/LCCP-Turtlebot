@@ -1,6 +1,6 @@
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
-//#include "detect_marker/Markers.h"
+#include "detect_marker/MarkerInfo.h"
 #include "kobuki_msgs/BumperEvent.h"
 #include "tf/transform_listener.h"
 #include "sensor_msgs/Image.h"
@@ -55,7 +55,7 @@ private:
 	void bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg);
 	//void rgbCallback(const sensor_msgs::ImageConstPtr &msg);
     void rotateTurtlebot();
-    void getLocationCallback(const geometry_msgs::Vector3StampedConstPtr &marker_msg);
+    void getLocationCallback(const detect_marker::MarkerInfo marker_msg);
 	void targetFinishedCallback(const std_msgs::EmptyConstPtr empty);
 	void driveForwardOdom(double distance);
 	void rotateOdom(double angle);
