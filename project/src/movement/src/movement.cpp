@@ -10,6 +10,7 @@ Mover::Mover()
   //Variables
   keepMoving = true;
   gotTarget = false;
+  reachedTarget = false;
   nextId = 0;
 
   //Publishers
@@ -179,6 +180,8 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
         {
           std_msgs::Empty empty;
           targetReachedRequest.publish(empty); //send request if target is in front of us
+          gotTarget = false;
+          reachedTarget = true;
         }
 
       ROS_INFO("Obstacle in %f!", closestRange);
@@ -210,21 +213,51 @@ void Mover::bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumperSu
       ros::spinOnce();
     }
 }
-/*
-void Mover::rgbCallback(const sensor_msgs::ImageConstPtr &msg)
-{
-  if(gotTarget)
-    {
 
-    }
+void Mover::rotateTurtlebot()
+{
+  ros::Rate rate(10);
+  while(ros::ok() && !reachedTarget)
+  {
+    geometry_msgs::Twist vel_msg;
+    vel_msg.angular.z = m_angularVelocity;
+    vel_msg.linear.x = 0.2;
+    commandPub.publish(vel_msg);
+    // jump into a callback function, in case there is a message coming...
+    ros::spinOnce();
+    rate.sleep();
+  }
 }
-*/
 
-void Mover::getLocationCallback(const geometry_msgs::Vector3StampedConstPtr &vector)
+void Mover::getLocationCallback(const geometry_msgs::Vector3StampedConstPtr &marker_msg)
 {
-  keepMoving = false;
-  target.vector = vector->vector;
-  gotTarget = true;
+    //map the coordiante to the center
+    float f_Xm = marker_msg->x - 320;
+    enum e_Direction { left , right};
+
+    if (!reachedTarget)
+    {
+        //adjust robot, so the marker actually is in the center
+        if (f_Xm < 0)
+        {
+          //rotate bot to the right
+          e_Direction = left;
+          m_angularVelocity = -0.1;
+          rotateTurtlebot();
+        }
+        else
+          if (e_Direction != right) m_angularVelocity = 0;
+
+        if (f_Xm > 0)
+        {
+          //rotate bot to the left
+          e_Direction =  right;
+          m_angularVelocity = +0.1;
+          rotateTurtlebot();
+        }
+        else
+          if (e_Direction != left) m_angularVelocity = 0;
+    }
 }
 
 void Mover::targetFinishedCallback(const std_msgs::EmptyConstPtr empty)
@@ -261,6 +294,7 @@ void Mover::startMoving()
     {
       if(gotTarget==false)
         {
+          reachedTarget = false;
           moveRandomly();
         }
       else

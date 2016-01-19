@@ -16,7 +16,7 @@ Stopper::Stopper()
   m_markerSub = node.subscribe("/<MARKER TOPIC HERE>", 10, &Stopper::markerDetectCallback, this);
   nextId = 0;
 }
-//Callback function that is invoked when a marker msg arrives - Alex
+//Callback function that is invoked when a marker msg arrives
 void markerDetectCallback(const detect_marker::Markers::ConstPtr& marker_msg)
 {
   //map the coordiante to the center
@@ -45,7 +45,7 @@ void markerDetectCallback(const detect_marker::Markers::ConstPtr& marker_msg)
     if (e_Direction != left) m_angularVelocity = 0;
 }
 
-//rotation of the turtlebot - Alex
+//rotation of the turtlebot
 void rotateTurtlebot()
 {
   ros::Rate rate(10);

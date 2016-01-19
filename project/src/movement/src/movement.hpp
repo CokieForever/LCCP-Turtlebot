@@ -43,7 +43,9 @@ private:
 	ros::Subscriber getLocationSub;
 	ros::Subscriber targetFinishedSub;
 
+    float m_angularVelocity;
 	bool keepMoving; //Indicates wether the robot should continue moving
+    bool reachedTarget;
 	bool gotTarget;
 	geometry_msgs::Vector3Stamped target;
 	int  nextId;
@@ -52,7 +54,8 @@ private:
 	void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan);
 	void bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg);
 	//void rgbCallback(const sensor_msgs::ImageConstPtr &msg);
-	void getLocationCallback(const geometry_msgs::Vector3StampedConstPtr &vector);
+    void rotateTurtlebot();
+    void getLocationCallback(const geometry_msgs::Vector3StampedConstPtr &marker_msg);
 	void targetFinishedCallback(const std_msgs::EmptyConstPtr empty);
 	void driveForwardOdom(double distance);
 	void rotateOdom(double angle);
