@@ -58,7 +58,7 @@ private:
 	void bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg);
 	//void rgbCallback(const sensor_msgs::ImageConstPtr &msg);
     void rotateTurtlebot();
-    void getLocationCallback(const detect_marker::MarkersInfos marker_msg);
+    void getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &marker_msg);
 	void targetFinishedCallback(const std_msgs::EmptyConstPtr empty);
 	void driveForwardOdom(double distance);
 	void rotateOdom(double angle);

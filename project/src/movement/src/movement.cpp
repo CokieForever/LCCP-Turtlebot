@@ -22,7 +22,7 @@ Mover::Mover()
   laserSub = node.subscribe("/scan", 1, &Mover::scanCallback, this);
   bumperSub = node.subscribe("mobile_base/events/bumperSub", 20, &Mover::bumperSubCallback, this);
 //  imageSub = node.subscribe("/camera/rgb/image_rect_color", 10, &Mover::rgbCallback, this);
-  getLocationSub = node.subscribe("/markersinfo", 10, &Mover::getLocationCallback, this);
+  getLocationSub = node.subscribe("/markerinfo", 10, &Mover::getLocationCallback, this);
   targetFinishedSub = node.subscribe("targetFinishedTopic", 10, &Mover::targetFinishedCallback, this);
 }
 
@@ -98,7 +98,7 @@ void Mover::rotateOdom(double angle)
       base_cmd.linear.y = base_cmd.linear.x = 0;
       base_cmd.angular.z = -0.25;
     }
-  ros::Rate rate(10.0);
+
   bool done = false;
 
   //get original angle in RAD
@@ -110,13 +110,13 @@ void Mover::rotateOdom(double angle)
 
   ros::Rate rate2(10);
   //Run loop until rotation has been done
-  while (!done && node.ok())
+  while (!done && node.ok() && !gotTarget)
     {
       tfScalar relativeAngle, currentAngle, previousAngle;
 
       //send the rotation command
       commandPub.publish(base_cmd);
-      rate.sleep();
+      rate2.sleep();
 
       if(runFirstTime==false){previousAngle = currentAngle;}
 
@@ -155,7 +155,9 @@ void Mover::rotateOdom(double angle)
           runFirstTime =true;
         }
       ros::spinOnce();
+
     }
+  ros::spinOnce();
 }
 
 
@@ -178,18 +180,23 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
   //ROS_INFO("closest range = %f", closestRange);
   if(closestRange<MIN_PROXIMITY_RANGE_M)
     {
+      keepMoving=false;
       //check if you have a target we are heading for
       if(gotTarget==true)
         {
-          std_msgs::Empty empty;
-          targetReachedRequest.publish(empty); //send request if target is in front of us
           gotTarget = false;
           reachedTarget = true;
+          m_searchMarker++;
+          ROS_INFO("Target reached!!! New Target Id: %d", m_searchMarker);
+          rotateOdom(180);
+          driveForwardOdom(0.75);
         }
+       else
+        {
+          ROS_INFO("Obstacle in %f!", closestRange);
 
-      ROS_INFO("Obstacle in %f!", closestRange);
-      keepMoving=false;
-      rotateOdom(30.0);
+          rotateOdom(30.0);
+        }
     }
   else
     {
@@ -219,55 +226,63 @@ void Mover::bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumperSu
 
 void Mover::rotateTurtlebot()
 {
-  ros::Rate rate(10);
-  while(ros::ok() && !reachedTarget)
-  {
+    ros::Rate rateX(50);
     geometry_msgs::Twist vel_msg;
     vel_msg.angular.z = m_angularVelocity;
-    vel_msg.linear.x = 0.2;
+    vel_msg.linear.x = 0.15;
     commandPub.publish(vel_msg);
     // jump into a callback function, in case there is a message coming...
+    rateX.sleep();
     ros::spinOnce();
-    rate.sleep();
-  }
 }
 
-void Mover::getLocationCallback(const detect_marker::MarkersInfos marker_msg)
+void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &marker_msg)
 {
-    ROS_INFO("location callback!");
-    //map the coordiante to the center
-    int array_length = marker_msg.infos.size();
-    float f_Xm;
-    for (int i=0; i<array_length; i++)
-    {
-        if (marker_msg.infos[i].id == m_searchMarker)
-            f_Xm = marker_msg.infos[i].x;
-    }
-    enum e_Direction { left , right} edir;
-    ROS_INFO("Location of marker: %f", f_Xm);
-    if (!reachedTarget && f_Xm)
-    {
+   if (marker_msg->infos.size())
+     {
+      ROS_INFO("location callback!");
+      //map the coordiante to the center
+      int array_length = marker_msg->infos.size();
+      float f_Xm = 0.0;
+      for (int i=0; i<array_length; i++)
+      {
+        if (marker_msg->infos[i].id == m_searchMarker)
+        f_Xm = marker_msg->infos[i].x;
+      }
+      enum e_Direction { left , right} edir;
+      ROS_INFO("Location of marker: %f", f_Xm);
+      if (!reachedTarget && f_Xm!=0.0)
+      {
+          gotTarget = true;
         //adjust robot, so the marker actually is in the center
         if (f_Xm < 0)
         {
           //rotate bot to the right
           edir = left;
-          m_angularVelocity = -0.1;
+          m_angularVelocity = -f_Xm*0.8;
+          ROS_INFO("Rotate to Left");
           rotateTurtlebot();
-        }
-        else
-          if (edir != right) m_angularVelocity = 0;
 
-        if (f_Xm > 0)
+        }
+
+        else if (f_Xm > 0)
         {
           //rotate bot to the left
           edir =  right;
-          m_angularVelocity = +0.1;
+          m_angularVelocity = -f_Xm*0.8;
+          ROS_INFO("Rotate to Right");
+
           rotateTurtlebot();
         }
         else
-          if (edir != left) m_angularVelocity = 0;
-    }
+          {
+           m_angularVelocity = 0;
+           rotateTurtlebot();
+          }
+        }
+      else{gotTarget=false;}
+     }
+   ros::spinOnce();
 }
 
 void Mover::targetFinishedCallback(const std_msgs::EmptyConstPtr empty)
@@ -281,8 +296,8 @@ void Mover::targetFinishedCallback(const std_msgs::EmptyConstPtr empty)
 void Mover::moveRandomly()
 {
   srand (time(NULL));
-  double randDist = 2.5*((double) rand() / (RAND_MAX));
-  double randAngle = 180.0*((double) rand() / (RAND_MAX));
+  double randDist = 1.5*((double) rand() / (RAND_MAX));
+  double randAngle = 90.0*((double) rand() / (RAND_MAX));
 
   ROS_INFO("Random Angle = %f", randAngle);
   rotateOdom(randAngle);
@@ -307,7 +322,7 @@ void Mover::startMoving()
         }
       else
         {
-          driveForwardOdom(0.75);
+          driveForwardOdom(0.2);
         }
       ros::spinOnce();
       rate.sleep();
