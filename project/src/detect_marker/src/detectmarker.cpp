@@ -1,5 +1,4 @@
 #include "aruco/aruco.h"
-#include "cv_bridge/cv_bridge.h"
 #include <sensor_msgs/image_encodings.h>
 
 #include "detectmarker.h"
@@ -11,7 +10,7 @@ DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     ROS_INFO("Subscribing to camera image topic...");
     m_cameraSub = m_nodeHandle.subscribe("/camera/rgb/image_raw", 1, &DetectMarker::cameraSubCallback, this);
     ros::Rate loopRate(10);
-	while (ros::ok() && m_cameraSub.getNumPublishers() <= 0)
+    while (ros::ok() && m_cameraSub.getNumPublishers() <= 0)
         loopRate.sleep();
 
     ROS_INFO("Creating markers topic...");
@@ -124,6 +123,40 @@ bool DetectMarker::ComputerQuadrilateralCenter(Point points[4], Point *centerPoi
     Point linePoints1[2] = {points[0], points[2]};
     Point linePoints2[2] = {points[1], points[3]};
     return ComputeLinesIntersection(linePoints1, linePoints2, centerPoint);
+}
+
+void DetectMarker::Filtering(const cv::Mat& img, cv::Mat** output)
+{
+    cv::Mat *field = NULL;
+    Deinterlace(img, &field);
+
+    //TODO
+
+    *output = field;
+}
+
+void DetectMarker::Deinterlace(const cv::Mat& frame, cv::Mat** field1, cv::Mat** field2)
+{
+    int height = frame.rows;
+
+    cv::Mat f1((height+1)/2, frame.cols, frame.type());
+    cv::Mat f2((height+1)/2, frame.cols, frame.type());
+
+    for (int y=0 ; y < height ; y+=2)
+    {
+        f1.row(y/2) = frame.row(y);
+        if (field2 != NULL)
+            f2.row(y/2) = frame.row(y+1);
+    }
+
+    *field1 = new cv::Mat(cv::Mat(frame.size(), frame.type()));
+    cv::resize(f1, **field1, frame.size());
+
+    if (field2 != NULL)
+    {
+        *field2 = new cv::Mat(cv::Mat(frame.size(), frame.type()));
+        cv::resize(f2, **field2, frame.size());
+    }
 }
 
 void DetectMarker::Detect()

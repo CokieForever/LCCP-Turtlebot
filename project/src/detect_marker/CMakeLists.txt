@@ -150,6 +150,11 @@ include_directories(
 # )
 add_executable(detect_marker src/detect.cpp src/detectmarker.cpp)
 target_link_libraries(detect_marker ${catkin_LIBRARIES} ${OpenCV_LIBS})
+add_dependencies(detect_marker detect_marker_generate_messages_cpp)  # Should not be mandatory but does not work without...
+add_executable(camrecord src/camrecord.cpp)
+target_link_libraries(camrecord ${catkin_LIBRARIES} ${OpenCV_LIBS})
+add_executable(imagebroadcast src/imagebroadcast.cpp)
+target_link_libraries(imagebroadcast ${catkin_LIBRARIES} ${OpenCV_LIBS})
 #############
 ## Install ##
 #############
