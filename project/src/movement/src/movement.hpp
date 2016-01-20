@@ -1,6 +1,6 @@
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
-#include "detect_marker/MarkerInfo.h"
+#include "detect_marker/MarkersInfos.h"
 #include "kobuki_msgs/BumperEvent.h"
 #include "tf/transform_listener.h"
 #include "sensor_msgs/Image.h"
@@ -42,6 +42,8 @@ private:
 	//ros::Subscriber imageSub;
 	ros::Subscriber getLocationSub;
 	ros::Subscriber targetFinishedSub;
+
+    int m_markerCounter;
 
     float m_angularVelocity;
 	bool keepMoving; //Indicates wether the robot should continue moving

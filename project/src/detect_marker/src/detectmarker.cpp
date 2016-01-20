@@ -15,7 +15,7 @@ DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
         loopRate.sleep();
 
     ROS_INFO("Creating markers topic...");
-    m_markersPub = m_nodeHandle.advertise<detect_marker::MarkerInfo>("/markerinfo", 10);
+    m_markersPub = m_nodeHandle.advertise<detect_marker::MarkersInfos>("/markerinfo", 10);
     /*while (ros::ok() && m_markersPub.getNumSubscribers() <= 0)
         loopRate.sleep();*/
     
@@ -86,14 +86,14 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
             markerInfo.y = 2*(center.y/(double)height)-1;
             markerInfo.id = marker.id;
             markersInfos.infos.push_back(markerInfo);
-           if (!marker.id) m_markersPub.publish(markerInfo);
+
             ROS_INFO("Marker %d: (%.3f, %.3f)", markerInfo.id, markerInfo.x, markerInfo.y);
         }
     }
     
     ROS_INFO("Publishing %lu marker infos.", markersInfos.infos.size());
 
-
+    m_markersPub.publish(markersInfos);
     cv::imshow("Marker Detection", frame);
     cv::waitKey(1);
 }

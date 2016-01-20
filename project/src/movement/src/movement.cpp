@@ -12,6 +12,7 @@ Mover::Mover()
   gotTarget = false;
   reachedTarget = false;
   nextId = 0;
+  searchMarker = 0;
 
   //Publishers
   commandPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 10);
@@ -233,7 +234,7 @@ void Mover::rotateTurtlebot()
   }
 }
 
-void Mover::getLocationCallback(const detect_marker::MarkerInfo marker_msg)
+void Mover::getLocationCallback(const detect_marker::MarkersInfos marker_msg)
 {
     ROS_INFO("location callback!");
     //map the coordiante to the center
@@ -285,7 +286,7 @@ void Mover::moveRandomly()
   driveForwardOdom(randDist);
 
   ROS_INFO("Look around");
- //rotateOdom(358);
+  rotateOdom(358);
   ROS_INFO("Found nothing");
 }
 
