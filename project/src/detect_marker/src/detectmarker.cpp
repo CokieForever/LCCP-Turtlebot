@@ -1,4 +1,3 @@
-#include "aruco/aruco.h"
 #include <sensor_msgs/image_encodings.h>
 
 #include "detectmarker.h"
@@ -15,9 +14,6 @@ DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
 
     ROS_INFO("Creating markers topic...");
     m_markersPub = m_nodeHandle.advertise<detect_marker::MarkersInfos>("/markerinfo", 10);
-    /*while (ros::ok() && m_markersPub.getNumSubscribers() <= 0)
-        loopRate.sleep();*/
-    
     ROS_INFO("Done, everything's ready.");
 }
 
@@ -42,29 +38,81 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
         exit(-1);
     }
 
-    int width = img.cols;
-    int height = img.rows;
-    int channels = img.channels();
-    ROS_INFO("Image size: %dx%dx%d", width, height, channels);
-    if (img.cols <= 0 || img.rows <= 0)
-    {
-        ROS_WARN("Received emtpy / unconventional image.");
-        return;
-    }
-    
+
     aruco::MarkerDetector detector;
     std::vector<aruco::Marker> markers;
     
-    cv::Scalar colorScalar(255,155,0, 0);
+
     detector.detect(img, markers);
 
     int nbMarkers = markers.size();
     ROS_INFO("Amount of markers: %d", nbMarkers);
 
-    detect_marker::MarkersInfos markersInfos;
-    cv::Mat frame = img;
-    for (int i=0 ; i < nbMarkers ; i++)
+
+
+
+    if (nbMarkers==0)
     {
+	    int width = img.cols;
+    	    int height = img.rows;
+    	    int channels = img.channels();
+    	    ROS_INFO("Raw Image size: %dx%dx%d", width, height, channels);
+    	    if (img.cols <= 0 || img.rows <= 0)
+    		{
+        	ROS_WARN("Received emtpy / unconventional image.");
+        	return;
+    		}
+    
+
+	cv::Size smallSize(width /2 ,height /2);
+	cv::Mat dst;
+    	cv::Mat smallImages;
+	for  ( int y =  0 ; y <img.rows-smallSize.height+2 ; y += height/2 )
+	{
+
+    		for  ( int x =  0 ; x <img.cols-smallSize.width+2 ; x +=width/2 )
+    		{
+
+			cv::Rect rect = cv::Rect(x, y, smallSize.width, smallSize.height);
+        		cout << x << " " << y << " " << smallSize.width << " " << smallSize.height << endl;
+			ROS_INFO("Image size: %dx%dx%dx%d", x, y, smallSize.width, smallSize.height);
+        		smallImages.push_back(cv::Mat(img, rect));
+			resize(cv::Mat(img, rect), dst, img.size(), 0, 0, CV_INTER_LINEAR); 
+			detector.detect(dst,markers);
+			cv::Mat frame = dst;
+			drawingMarkers(frame, markers);
+
+    		}
+	}
+    }
+    else
+   {
+	detector.detect(img,markers);
+	cv::Mat frame=img;
+	drawingMarkers(frame, markers);
+   }
+
+
+
+}
+
+void DetectMarker::drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &markers )
+{
+	cv::Scalar colorScalar(255,155,0, 0);
+	detect_marker::MarkersInfos markersInfos;
+	int width = frame.cols;
+    	int height = frame.rows;
+    	int channels = frame.channels();
+    	ROS_INFO("Image size: %dx%dx%d", width, height, channels);
+    	if (frame.cols <= 0 || frame.rows <= 0)
+    	{
+        	ROS_WARN("Received emtpy / unconventional image.");
+        	return;
+    	}
+    
+	int nbMarkers=markers.size();
+	for (int i=0 ; i < nbMarkers ; i++)
+    	{
         aruco::Marker& marker = markers[i];
         marker.draw(frame, colorScalar);
 
@@ -96,6 +144,8 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     cv::imshow("Marker Detection", frame);
     cv::waitKey(1);
 }
+
+
 
 bool DetectMarker::ComputeLinesIntersection(Point linePoints1[2], Point linePoints2[2], Point *isectPoint)
 {

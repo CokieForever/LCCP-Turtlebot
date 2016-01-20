@@ -3,8 +3,6 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
-#include "cv_bridge/cv_bridge.h"
-#include "aruco/aruco.h"
 
 class DetectMarker
 {
@@ -24,10 +22,6 @@ class DetectMarker
         void cameraSubCallback(const sensor_msgs::Image::ConstPtr& msg);
         bool ComputeLinesIntersection(Point linePoints1[2], Point linePoints2[2], Point *isectPoint);
         bool ComputerQuadrilateralCenter(Point points[4], Point *centerPoint);
-        void drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &markers );
-        
-        void Deinterlace(const cv::Mat& frame, cv::Mat** field1, cv::Mat** field2=NULL);
-        void Filtering(const cv::Mat& img, cv::Mat** output);
 };
 
 #endif // DETECTMARKER_H
