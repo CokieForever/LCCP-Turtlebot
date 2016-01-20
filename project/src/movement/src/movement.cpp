@@ -12,7 +12,7 @@ Mover::Mover()
   gotTarget = false;
   reachedTarget = false;
   nextId = 0;
-  searchMarker = 0;
+  m_searchMarker = 0;
 
   //Publishers
   commandPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 10);
@@ -22,7 +22,7 @@ Mover::Mover()
   laserSub = node.subscribe("/scan", 1, &Mover::scanCallback, this);
   bumperSub = node.subscribe("mobile_base/events/bumperSub", 20, &Mover::bumperSubCallback, this);
 //  imageSub = node.subscribe("/camera/rgb/image_rect_color", 10, &Mover::rgbCallback, this);
-  getLocationSub = node.subscribe("locationTopic", 10, &Mover::getLocationCallback, this);
+  getLocationSub = node.subscribe("/markersinfo", 10, &Mover::getLocationCallback, this);
   targetFinishedSub = node.subscribe("targetFinishedTopic", 10, &Mover::targetFinishedCallback, this);
 }
 
@@ -154,9 +154,7 @@ void Mover::rotateOdom(double angle)
           keepMoving=true;
           runFirstTime =true;
         }
-      ROS_INFO("BEFORE SPINONCE");
-      //ros::spinOnce();
-      //rate2.sleep();
+      ros::spinOnce();
     }
 }
 
@@ -238,15 +236,15 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos marker_msg)
 {
     ROS_INFO("location callback!");
     //map the coordiante to the center
-    int array_length = sizeof(marker_msg);
+    int array_length = marker_msg.infos.size();
     float f_Xm;
     for (int i=0; i<array_length; i++)
     {
-        if (marker_msg[i].id == m_searchMarker)
-            f_Xm = marker_msg[i].x - 320;
+        if (marker_msg.infos[i].id == m_searchMarker)
+            f_Xm = marker_msg.infos[i].x;
     }
     enum e_Direction { left , right} edir;
-    ROS_INFO("Location of marker: %f", marker_msg.x);
+    ROS_INFO("Location of marker: %f", f_Xm);
     if (!reachedTarget && f_Xm)
     {
         //adjust robot, so the marker actually is in the center
@@ -283,16 +281,14 @@ void Mover::targetFinishedCallback(const std_msgs::EmptyConstPtr empty)
 void Mover::moveRandomly()
 {
   srand (time(NULL));
-  double randDist = ((double) rand() / (RAND_MAX));
-  double randAngle = ((double) 180*(rand() / (RAND_MAX)));
+  double randDist = 2.5*((double) rand() / (RAND_MAX));
+  double randAngle = 180.0*((double) rand() / (RAND_MAX));
 
   ROS_INFO("Random Angle = %f", randAngle);
   rotateOdom(randAngle);
   ROS_INFO("Random Distance = %f", randDist);
   driveForwardOdom(randDist);
 
-  ROS_INFO("Look around");
-  rotateOdom(358);
   ROS_INFO("Found nothing");
 }
 

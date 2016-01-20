@@ -11,11 +11,8 @@ public://Tunable parameters
   const static double FORWARD_SPEED_MPS = 0.2;
   const static double MIN_SCAN_ANGLE_RAD = -0.5;
   const static double MAX_SCAN_ANGLE_RAD = 0.5;
-<<<<<<< HEAD
   const static float  MIN_PROXIMITY_RANGE_M = 0.75;	//Should be smaller than sensor_msgs::LaserScan::range_max
-=======
-  const static float  MIN_PROXIMITY_RANGE_M = 1.5;	//Should be smaller than sensor_msgs::LaserScan::range_max
->>>>>>> movement_group
+
   Mover();
   void startMoving();
   tf::TransformListener listener;
@@ -61,7 +58,7 @@ private:
 	void bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg);
 	//void rgbCallback(const sensor_msgs::ImageConstPtr &msg);
     void rotateTurtlebot();
-    void getLocationCallback(const detect_marker::MarkerInfo marker_msg);
+    void getLocationCallback(const detect_marker::MarkersInfos marker_msg);
 	void targetFinishedCallback(const std_msgs::EmptyConstPtr empty);
 	void driveForwardOdom(double distance);
 	void rotateOdom(double angle);
