@@ -17,6 +17,9 @@ class DetectMarker
         {
             double x, y;
         };
+        
+        static const double MARKER_REF_DIST = 0.20;
+        
         ros::NodeHandle& m_nodeHandle;
         ros::Subscriber m_cameraSub;
         ros::Publisher m_markersPub;
