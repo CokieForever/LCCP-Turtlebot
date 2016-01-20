@@ -1,16 +1,19 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(initial_detection)
+project(task1)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  aruco
-  rosconsole
+ aruco
   roscpp
-  detect_marker
-  geometry_msgs
+  std_msgs
+  cv_bridge
   sensor_msgs
+image_transport
+message_generation
+  rosconsole
+  rostime
 )
 
 ## System dependencies are found with CMake's conventions
@@ -104,8 +107,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES initial_detection
-#  CATKIN_DEPENDS rosconsole roscpp rosrun
+#  LIBRARIES task1
+#  CATKIN_DEPENDS roscpp
 #  DEPENDS system_lib
 )
 
@@ -121,27 +124,31 @@ include_directories(
 )
 
 ## Declare a C++ library
-# add_library(initial_detection
-#   src/${PROJECT_NAME}/initial_detection.cpp
+# add_library(task1
+#   src/${PROJECT_NAME}/task1.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(initial_detection ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(task1 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-# add_executable(initial_detection_node src/initial_detection_node.cpp)
-add_executable(initial_detection  src/initial_detection.cpp  src/run_initial_detection.cpp)
+add_executable(detect_marker_node ../detect_marker/src/detect.cpp ../detect_marker/src/detectmarker.cpp)
+
+add_executable(stopper_node ../stopper_package/src/stopper.cpp ../stopper_package/src/run_stopper.cpp)
+
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(initial_detection_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(initial_detection  ${catkin_LIBRARIES})
+# add_dependencies(task1_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(initial_detection_node
-#   ${catkin_LIBRARIES}
-# )
-add_dependencies(initial_detection detect_marker_generate_messages_cpp)
+ target_link_libraries(detect_marker_node
+   ${catkin_LIBRARIES}
+ )
+ target_link_libraries(stopper_node
+   ${catkin_LIBRARIES}
+ )
 
 #############
 ## Install ##
@@ -158,7 +165,7 @@ add_dependencies(initial_detection detect_marker_generate_messages_cpp)
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS initial_detection initial_detection_node
+# install(TARGETS task1 task1_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -183,7 +190,7 @@ add_dependencies(initial_detection detect_marker_generate_messages_cpp)
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_initial_detection.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_task1.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
