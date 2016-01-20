@@ -238,10 +238,16 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos marker_msg)
 {
     ROS_INFO("location callback!");
     //map the coordiante to the center
-    float f_Xm = marker_msg.x - 320;
+    int array_length = sizeof(marker_msg);
+    float f_Xm;
+    for (int i=0; i<array_length; i++)
+    {
+        if (marker_msg[i].id == m_searchMarker)
+            f_Xm = marker_msg[i].x - 320;
+    }
     enum e_Direction { left , right} edir;
     ROS_INFO("Location of marker: %f", marker_msg.x);
-    if (!reachedTarget)
+    if (!reachedTarget && f_Xm)
     {
         //adjust robot, so the marker actually is in the center
         if (f_Xm < 0)
