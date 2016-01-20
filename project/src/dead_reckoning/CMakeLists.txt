@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(initial_detection)
+project(dead_reckoning)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -7,9 +7,7 @@ project(initial_detection)
 find_package(catkin REQUIRED COMPONENTS
   rosconsole
   roscpp
-detect_marker
-geometry_msgs
-sensor_msgs
+  rostime
 )
 
 ## System dependencies are found with CMake's conventions
@@ -30,10 +28,10 @@ sensor_msgs
 ## * Let MSG_DEP_SET be the set of packages whose message types you use in
 ##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
 ## * In the file package.xml:
-##   * add a build_depend tag for "message_generation"
 ##   * add a build_depend and a run_depend tag for each package in MSG_DEP_SET
-##   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
-##     but can be declared for certainty nonetheless:
+##   * If MSG_DEP_SET isn't empty the following dependencies might have been
+##     pulled in transitively but can be declared for certainty nonetheless:
+##     * add a build_depend tag for "message_generation"
 ##     * add a run_depend tag for "message_runtime"
 ## * In this file (CMakeLists.txt):
 ##   * add "message_generation" and every package in MSG_DEP_SET to
@@ -72,26 +70,6 @@ sensor_msgs
 #   std_msgs  # Or other packages containing msgs
 # )
 
-################################################
-## Declare ROS dynamic reconfigure parameters ##
-################################################
-
-## To declare and build dynamic reconfigure parameters within this
-## package, follow these steps:
-## * In the file package.xml:
-##   * add a build_depend and a run_depend tag for "dynamic_reconfigure"
-## * In this file (CMakeLists.txt):
-##   * add "dynamic_reconfigure" to
-##     find_package(catkin REQUIRED COMPONENTS ...)
-##   * uncomment the "generate_dynamic_reconfigure_options" section below
-##     and list every .cfg file to be processed
-
-## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
-
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -103,8 +81,8 @@ sensor_msgs
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES initial_detection
-#  CATKIN_DEPENDS rosconsole roscpp rosrun
+#  LIBRARIES dead_reckoning
+#  CATKIN_DEPENDS rosconsole roscpp rostime
 #  DEPENDS system_lib
 )
 
@@ -119,28 +97,24 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-## Declare a C++ library
-# add_library(initial_detection
-#   src/${PROJECT_NAME}/initial_detection.cpp
+## Declare a cpp library
+# add_library(dead_reckoning
+#   src/${PROJECT_NAME}/dead_reckoning.cpp
 # )
 
-## Add cmake target dependencies of the library
-## as an example, code may need to be generated before libraries
-## either from message generation or dynamic reconfigure
-# add_dependencies(initial_detection ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+## Declare a cpp executable
+add_executable(deadreckoning src/deadreckoning.cpp)
 
-## Declare a C++ executable
-# add_executable(initial_detection_node src/initial_detection_node.cpp)
-add_executable(initial_detection  src/initial_detection.cpp  src/run_initial_detection.cpp)
-## Add cmake target dependencies of the executable
-## same as for the library above
-# add_dependencies(initial_detection_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(initial_detection  ${catkin_LIBRARIES})
+## Add cmake target dependencies of the executable/library
+## as an example, message headers may need to be generated before nodes
+# add_dependencies(dead_reckoning_node dead_reckoning_generate_messages_cpp)
+
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(initial_detection_node
-#   ${catkin_LIBRARIES}
-# )
-add_dependencies(initial_detection detect_marker_generate_messages_cpp)
+target_link_libraries(deadreckoning
+  ${catkin_LIBRARIES}
+  ${roscpp_LIBRARIES}
+  SDL
+)
 
 #############
 ## Install ##
@@ -157,7 +131,7 @@ add_dependencies(initial_detection detect_marker_generate_messages_cpp)
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS initial_detection initial_detection_node
+# install(TARGETS dead_reckoning dead_reckoning_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -182,7 +156,7 @@ add_dependencies(initial_detection detect_marker_generate_messages_cpp)
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_initial_detection.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_dead_reckoning.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
