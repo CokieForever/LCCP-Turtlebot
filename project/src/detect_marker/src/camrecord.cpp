@@ -5,7 +5,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 
-#include "utilities.h"
+#include "../../utilities.h"
 
 using namespace std;
 using namespace cv;
