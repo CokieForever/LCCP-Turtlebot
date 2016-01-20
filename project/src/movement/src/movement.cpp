@@ -17,7 +17,7 @@ Mover::Mover()
   targetReachedRequest = node.advertise<std_msgs::Empty>("targetReached", 10);
 
   //Subscribers
-  laserSub = node.subscribe("/scan", 1, &Mover::scanCallback, this);
+  laserSub = node.subscribe("scan", 1, &Mover::scanCallback, this);
   bumperSub = node.subscribe("mobile_base/events/bumperSub", 20, &Mover::bumperSubCallback, this);
 //  imageSub = node.subscribe("/camera/rgb/image_rect_color", 10, &Mover::rgbCallback, this);
   getLocationSub = node.subscribe("locationTopic", 10, &Mover::getLocationCallback, this);
@@ -151,7 +151,9 @@ void Mover::rotateOdom(double angle)
           keepMoving=true;
           runFirstTime =true;
         }
+      ros::spinOnce();
     }
+
 }
 
 
@@ -159,8 +161,8 @@ void Mover::rotateOdom(double angle)
 void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
   int minIndex = ceil((MIN_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
-  int maxIndex = floor((MAX_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
 
+  int maxIndex = floor((MAX_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
   float closestRange = scan->ranges[minIndex];
 
   for(int currIndex = minIndex+1; currIndex<=maxIndex; currIndex++)
@@ -267,7 +269,7 @@ void Mover::startMoving()
         {
           driveForwardOdom(0.75);
         }
-      ros::spinOnce();
+      //ros::spinOnce();
       rate.sleep();
     }
   while(!keepMoving)
