@@ -92,8 +92,8 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     }
     
     ROS_INFO("Publishing %lu marker infos.", markersInfos.infos.size());
-    m_markersPub.publish(markersInfos);
 
+    m_markersPub.publish(markersInfos);
     cv::imshow("Marker Detection", frame);
     cv::waitKey(1);
 }

@@ -1,6 +1,6 @@
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
-//#include "detect_marker/Markers.h"
+#include "detect_marker/MarkersInfos.h"
 #include "kobuki_msgs/BumperEvent.h"
 #include "tf/transform_listener.h"
 #include "sensor_msgs/Image.h"
@@ -43,7 +43,11 @@ private:
 	ros::Subscriber getLocationSub;
 	ros::Subscriber targetFinishedSub;
 
+    int m_markerCounter;
+
+    float m_angularVelocity;
 	bool keepMoving; //Indicates wether the robot should continue moving
+    bool reachedTarget;
 	bool gotTarget;
 	geometry_msgs::Vector3Stamped target;
 	int  nextId;
@@ -52,7 +56,8 @@ private:
 	void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan);
 	void bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg);
 	//void rgbCallback(const sensor_msgs::ImageConstPtr &msg);
-	void getLocationCallback(const geometry_msgs::Vector3StampedConstPtr &vector);
+    void rotateTurtlebot();
+    void getLocationCallback(const detect_marker::MarkerInfo marker_msg);
 	void targetFinishedCallback(const std_msgs::EmptyConstPtr empty);
 	void driveForwardOdom(double distance);
 	void rotateOdom(double angle);
