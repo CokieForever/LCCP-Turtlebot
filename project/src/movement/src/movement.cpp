@@ -14,6 +14,8 @@ Mover::Mover()
   nextId = 0;
   m_searchMarker = 0;
 
+  //distance between marker and turtlebot
+  m_distanceToMarker = 9999;
   //Publishers
   commandPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 10);
   targetReachedRequest = node.advertise<std_msgs::Empty>("targetReached", 10);
@@ -25,25 +27,6 @@ Mover::Mover()
   getLocationSub = node.subscribe("/markerinfo", 10, &Mover::getLocationCallback, this);
   targetFinishedSub = node.subscribe("targetFinishedTopic", 10, &Mover::targetFinishedCallback, this);
 }
-
-/*The movement.cpp includes following methodes:
- *
- * driveForwardOdom(double distance)[line xx]; forwards the robot to move a certain distance
- *
- * rotateOdom(double angle)[line xx]; forwards the robot to rotate a certain angle
- *
- * scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)[line xx]; checks in the Range of +/-30 deg if there is an obstacle in front of the robot
- *
- * bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumperSub_msg)[line xx]; reacts on pressed bumper of the robot
- *
- * getLocationCallback(const geometry_msgs::Vector3StampedConstPtr &vector)[line xx]; stores passed vector coordinates in member target
- *
- * targetFinishedCallback(const std_msgs::EmptyConstPtr empty)
- *
- * moveRandomly()[line xx]; if there is no aruco marker in the passed image the robot moves around randomly
- *
- * startMoving()[line xx]; Method which should be called externely. Includes the the while loop to keep node mover running
- */
 
 
 void Mover::driveForwardOdom(double distance)
@@ -168,7 +151,8 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
   int maxIndex = floor((MAX_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
 
   float closestRange = scan->ranges[minIndex];
-
+  //save distance between robot and marker (which is in the center)
+  m_distanceToMarker = scan->ranges[312];
   for(int currIndex = minIndex+1; currIndex<=maxIndex; currIndex++)
     {
       if(scan->ranges[currIndex] < closestRange)
@@ -224,14 +208,36 @@ void Mover::bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumperSu
     }
 }
 
-void Mover::rotateTurtlebot()
+void Mover::approachMarker()
 {
     ros::Rate rateX(50);
     geometry_msgs::Twist vel_msg;
     vel_msg.angular.z = m_angularVelocity;
     vel_msg.linear.x = 0.15;
     commandPub.publish(vel_msg);
-    // jump into a callback function, in case there is a message coming...
+    ROS_INFO("Distance to marker: %f", floor(m_distanceToMarker*10)/10 );
+    if (floor(m_distanceToMarker*10)/10 == 0.7 && gotTarget)
+    {
+        if (m_searchMarker == 7)
+        {
+            ROS_INFO("Reached all targets!!!");
+            vel_msg.angular.z = 0;
+            vel_msg.linear.x = 0;
+            commandPub.publish(vel_msg);
+            rotateOdom(358);
+        }
+        ROS_INFO("Target Reached!!! The Marker is %d", m_searchMarker++);
+        ROS_INFO("Searching next target: %d , distance is %f", m_searchMarker, m_distanceToMarker);
+
+        //stop robot and start random search
+        vel_msg.angular.z = 0;
+        vel_msg.linear.x = 0;
+        commandPub.publish(vel_msg);
+        rotateOdom(180);
+        //reset search
+        gotTarget = false;
+        reachedTarget = false;
+    }
     rateX.sleep();
     ros::spinOnce();
 }
@@ -242,42 +248,41 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
      {
       ROS_INFO("location callback!");
       //map the coordiante to the center
-      int array_length = marker_msg->infos.size();
+      int i_array_length = marker_msg->infos.size();
       float f_Xm = 0.0;
-      for (int i=0; i<array_length; i++)
+      for (int i=0; i<i_array_length; i++)
       {
+        //check if marker id is equal to the next id that the bot is searching
         if (marker_msg->infos[i].id == m_searchMarker)
-        f_Xm = marker_msg->infos[i].x;
+        {
+            f_Xm = marker_msg->infos[i].x;
+            //got a new target!
+            gotTarget = true;
+        }
       }
-      enum e_Direction { left , right} edir;
       ROS_INFO("Location of marker: %f", f_Xm);
-      if (!reachedTarget && f_Xm!=0.0)
+      //was if (!reachedTarget && f_Xm!=0.0 && gotTarget)
+      if (!reachedTarget && gotTarget)
       {
-          gotTarget = true;
         //adjust robot, so the marker actually is in the center
         if (f_Xm < 0)
         {
           //rotate bot to the right
-          edir = left;
           m_angularVelocity = -f_Xm*0.8;
           ROS_INFO("Rotate to Left");
-          rotateTurtlebot();
-
+          approachMarker();
         }
-
         else if (f_Xm > 0)
         {
           //rotate bot to the left
-          edir =  right;
           m_angularVelocity = -f_Xm*0.8;
           ROS_INFO("Rotate to Right");
-
-          rotateTurtlebot();
+          approachMarker();
         }
         else
           {
            m_angularVelocity = 0;
-           rotateTurtlebot();
+           approachMarker();
           }
         }
       else{gotTarget=false;}
@@ -298,12 +303,10 @@ void Mover::moveRandomly()
   srand (time(NULL));
   double randDist = 1.5*((double) rand() / (RAND_MAX));
   double randAngle = 90.0*((double) rand() / (RAND_MAX));
-
   ROS_INFO("Random Angle = %f", randAngle);
   rotateOdom(randAngle);
   ROS_INFO("Random Distance = %f", randDist);
   driveForwardOdom(randDist);
-
   ROS_INFO("Found nothing");
 }
 
