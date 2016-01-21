@@ -45,20 +45,19 @@ private:
 	ros::Subscriber targetFinishedSub;
 
     int m_searchMarker;
-
     float m_distanceToMarker;
     float m_angularVelocity;
-	bool keepMoving; //Indicates wether the robot should continue moving
-    bool reachedTarget;
-    bool gotTarget;
-	geometry_msgs::Vector3Stamped target;
-	int  nextId;
+    bool m_keepMoving; //Indicates wether the robot should continue moving
+    bool m_reachedTarget;
+    bool m_gotTarget;
+    geometry_msgs::Vector3Stamped m_target;
+    int  m_nextId;
 	void moveRandomly();
 
 	void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan);
 	void bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg);
 	//void rgbCallback(const sensor_msgs::ImageConstPtr &msg);
-    void approachMarker();
+    void approachMarker(int param_marker_id);
     void getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &marker_msg);
 	void targetFinishedCallback(const std_msgs::EmptyConstPtr empty);
 	void driveForwardOdom(double distance);
