@@ -24,7 +24,7 @@ DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
 
 void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-    ROS_INFO("Received image from camera.");
+    //ROS_INFO("Received image from camera.");
 
     cv::Mat img;
     try
@@ -46,7 +46,7 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     int width = img.cols;
     int height = img.rows;
     int channels = img.channels();
-    ROS_INFO("Image size: %dx%dx%d", width, height, channels);
+    //ROS_INFO("Image size: %dx%dx%d", width, height, channels);
     if (img.cols <= 0 || img.rows <= 0)
     {
         ROS_WARN("Received emtpy / unconventional image.");
@@ -60,7 +60,7 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     detector.detect(img, markers);
 
     int nbMarkers = markers.size();
-    ROS_INFO("Amount of markers: %d", nbMarkers);
+    //ROS_INFO("Amount of markers: %d", nbMarkers);
 
     detect_marker::MarkersInfos markersInfos;
     cv::Mat frame = img;
@@ -91,11 +91,12 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
         }
     }
     
-    ROS_INFO("Publishing %lu marker infos.", markersInfos.infos.size());
+    //ROS_INFO("Publishing %lu marker infos.", markersInfos.infos.size());
     if(markersInfos.infos.size()) m_markersPub.publish(markersInfos);
 
     cv::imshow("Marker Detection", frame);
     cv::waitKey(1);
+    ros::spinOnce();
 }
 
 bool DetectMarker::ComputeLinesIntersection(Point linePoints1[2], Point linePoints2[2], Point *isectPoint)
@@ -117,6 +118,7 @@ bool DetectMarker::ComputeLinesIntersection(Point linePoints1[2], Point linePoin
     isectPoint->x = ((x1*y2 - y1*x2) * (x3-x4) - (x1-x2) * (x3*y4 - y3*x4)) / d;
     isectPoint->y = ((x1*y2 - y1*x2) * (y3-y4) - (y1-y2) * (x3*y4 - y3*x4)) / d;
     return true;
+    ros::spinOnce();
 }
 
 bool DetectMarker::ComputerQuadrilateralCenter(Point points[4], Point *centerPoint)
@@ -128,6 +130,7 @@ bool DetectMarker::ComputerQuadrilateralCenter(Point points[4], Point *centerPoi
 
 void DetectMarker::Detect()
 {
-    ROS_INFO("Starting detection.");
+
+    ROS_INFO("Starting detection");
     ros::spin();
 }

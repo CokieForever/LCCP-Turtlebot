@@ -22,7 +22,7 @@ Mover::Mover()
 
     //Subscribers
     laserSub = node.subscribe("/scan", 1, &Mover::scanCallback, this);
-    bumperSub = node.subscribe("mobile_base/events/bumperSub", 20, &Mover::bumperSubCallback, this);
+    bumperSub = node.subscribe("mobile_base/events/bumper", 20, &Mover::bumperSubCallback, this);
     //  imageSub = node.subscribe("/camera/rgb/image_rect_color", 10, &Mover::rgbCallback, this);
     getLocationSub = node.subscribe("/markerinfo", 10, &Mover::getLocationCallback, this);
     targetFinishedSub = node.subscribe("targetFinishedTopic", 10, &Mover::targetFinishedCallback, this);
@@ -150,7 +150,8 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
     int maxIndex = floor((MAX_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
     float closestRange = scan->ranges[minIndex];
     //save distance between robot and marker (which is in the center)
-    m_distanceToMarker = scan->ranges[scan->ranges.size()/2];
+    if(scan->ranges[0]<=10 && scan->ranges[0]!=INFINITY){m_distanceToMarker = scan->ranges[0];}
+    ROS_INFO("Distance to marker %f !", m_distanceToMarker);
     for(int currIndex = minIndex+1; currIndex<=maxIndex; currIndex++)
     {
         if(scan->ranges[currIndex] < closestRange)
@@ -172,8 +173,9 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
         }
        else*/
         //rotate only if not approaching target
-        rotateOdom(180.0);
-        ROS_INFO("Turned 180 degrees in scan!");
+        ROS_INFO("Obstacle in %f Turn 25 degrees!", closestRange);
+        rotateOdom(25.0);
+
     }
     else
     {
@@ -185,9 +187,19 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 //Callback function for the bumperSub event. Stops the forward movement and initiates an rotation
 void Mover::bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumperSub_msg)
 {
-    if(bumperSub_msg->state==1)
+    if(bumperSub_msg->state)
     {
-        ROS_INFO("You just get bumped on %d!", bumperSub_msg->bumper);
+        switch(bumperSub_msg->bumper)
+          {
+            case 0: ROS_INFO("You just get bumped on the left!");
+                    break;
+            case 1: ROS_INFO("You just get bumped in the middle!");
+                    break;
+            case 2: ROS_INFO("You just get bumped on the right!");
+                    break;
+          default:  ROS_INFO("I bumped a ghost :P");
+          }
+
         //Move backwards
         geometry_msgs::Twist base_cmd;
         base_cmd.linear.y = base_cmd.angular.z = 0;
@@ -202,14 +214,14 @@ void Mover::bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumperSu
 
 void Mover::approachMarker(int param_marker_id)
 {
-    ros::Rate rateX(50);
+    ros::Rate rateX(20);
     geometry_msgs::Twist vel_msg;
     //save old distance to check if object is valid
     static float f_distance_old = m_distanceToMarker; // save
     bool b_invalid_object = false;
 
     vel_msg.angular.z = m_angularVelocity;
-    vel_msg.linear.x = 0.15;
+    vel_msg.linear.x = 0.25;
     commandPub.publish(vel_msg);
 
     if (f_distance_old != m_distanceToMarker)
@@ -223,13 +235,15 @@ void Mover::approachMarker(int param_marker_id)
         }
         else
             b_invalid_object = false;
-        f_distance_old = m_distanceToMarker;
+            f_distance_old = m_distanceToMarker;
     }
     //return the robot to its correct course
     commandPub.publish(vel_msg);
-    ROS_INFO("Distance to marker: %f", floor(m_distanceToMarker*10)/10 );
-    if (floor(m_distanceToMarker*10)/10 == 0.7 && m_gotTarget && param_marker_id == m_searchMarker && !b_invalid_object)
-    {
+    //ROS_INFO("Distance to marker: %f", floor(m_distanceToMarker*10)/10 );
+    //if (floor(m_distanceToMarker*10)/10 == 0.7 && m_gotTarget && param_marker_id == m_searchMarker && !b_invalid_object)
+      if (m_distanceToMarker<=0.7 && m_gotTarget && param_marker_id == m_searchMarker && !b_invalid_object)
+
+      {
         if (m_searchMarker == 7)
         {
             ROS_INFO("Reached all targets!!!");
@@ -334,7 +348,7 @@ void Mover::startMoving()
         }
         else
         {
-            driveForwardOdom(0.2);
+         //   driveForwardOdom(0.2);
         }
         ros::spinOnce();
         rate.sleep();
