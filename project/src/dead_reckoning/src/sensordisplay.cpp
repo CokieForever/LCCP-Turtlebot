@@ -67,7 +67,7 @@ class SensorDisplay
 {
     private:
         static const int NB_SCANCLOUDPOINTS = 1000;
-        static const int NB_DEPTHCLOUDPOINTS = 1000;
+        static const int NB_DEPTHCLOUDPOINTS = 20000;
         static const int SCREEN_WIDTH = 600;
         static const int SCREEN_HEIGHT = 600;
         
@@ -96,8 +96,8 @@ class SensorDisplay
                 double endY = range * sin(angle);
                 
                 int cloudPointIdx = (i+m_scanCloudPointsStartIdx) % NB_SCANCLOUDPOINTS;
-                m_scanCloudPoints[cloudPointIdx].x = endX;
-                m_scanCloudPoints[cloudPointIdx].y = endY;
+                m_scanCloudPoints[cloudPointIdx].x = endY;
+                m_scanCloudPoints[cloudPointIdx].y = -endX;
                 //ROS_INFO("Added cloud point (%.3f, %.3f)", endX, endY);
             }
             m_scanCloudPointsStartIdx += nbRanges;
@@ -114,12 +114,12 @@ class SensorDisplay
                 if (std::isnan(*iter_x) || std::isnan(*iter_y) || std::isnan(*iter_z))
                     continue;
                 
-                if (*iter_z > 1.0 || *iter_z < 0.0)
+                if (*iter_y > 1.0 || *iter_y < -1.0)
                     continue;
                 
                 int cloudPointIdx = m_depthCloudPointsStartIdx % NB_DEPTHCLOUDPOINTS;
-                m_scanCloudPoints[cloudPointIdx].x = *iter_x;
-                m_scanCloudPoints[cloudPointIdx].y = *iter_y;
+                m_depthCloudPoints[cloudPointIdx].x = *iter_x;
+                m_depthCloudPoints[cloudPointIdx].y = *iter_z;
                 
                 m_depthCloudPointsStartIdx++;
             }
@@ -128,11 +128,13 @@ class SensorDisplay
         void updateDisplay()
         {
             SDL_Rect pos = {(SCREEN_WIDTH-m_robotSurf->w)/2, (SCREEN_HEIGHT-m_robotSurf->h)/2};
-            SDL_FillRect(m_screen, NULL, SDL_MapRGB(m_screen->format, 0,0,0));
+            SDL_FillRect(m_screen, NULL, SDL_MapRGB(m_screen->format, 255,255,255));
             SDL_BlitSurface(m_robotSurf, NULL, m_screen, &pos);
             
             double kx = SCREEN_WIDTH / (m_maxX-m_minX);
             double ky = SCREEN_HEIGHT / (m_maxY-m_minY);
+            
+            SDL_LockSurface(m_screen);
             
             Uint32 red = SDL_MapRGB(m_screen->format, 255,0,0);
             for (int i=0 ; i < NB_SCANCLOUDPOINTS ; i++)
@@ -147,12 +149,13 @@ class SensorDisplay
                 if (!isnan(m_depthCloudPoints[i].x) && !isnan(m_depthCloudPoints[i].y))
                     putPixel(m_screen, (m_depthCloudPoints[i].x-m_minX) * kx, SCREEN_HEIGHT - (m_depthCloudPoints[i].y-m_minY) * ky, blue);
             }
-
+            
+            SDL_UnlockSurface(m_screen);
             SDL_Flip(m_screen);
         }
 
     public:
-        SensorDisplay(ros::NodeHandle& node, double maxX=20, double maxY=20, double minX=-20, double minY=-20):
+        SensorDisplay(ros::NodeHandle& node, double maxX=5, double maxY=5, double minX=-5, double minY=-5):
             m_node(node), m_minX(minX), m_minY(minY), m_maxX(maxX), m_maxY(maxY)
         {
             m_scanCloudPoints = new Vector[NB_SCANCLOUDPOINTS];
