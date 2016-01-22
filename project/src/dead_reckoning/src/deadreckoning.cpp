@@ -3,6 +3,8 @@
 #include <sensor_msgs/LaserScan.h>
 #include <complex>
 #include <SDL/SDL.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud2_iterator.h>
 
 #include "../../utilities.h"
 
@@ -140,8 +142,8 @@ class Grid
             m_minY = m_precision * round(m_minY / m_precision);
             m_maxX = m_precision * round(m_maxX / m_precision);
             m_maxY = m_precision * round(m_maxY / m_precision);
-            m_height = round((m_maxY - m_minY) / m_precision);
-            m_width = round((m_maxX - m_minX) / m_precision);
+            m_height = round((m_maxY - m_minY) / m_precision)+1;
+            m_width = round((m_maxX - m_minX) / m_precision)+1;
         }
         
         bool _get(int ix, int iy)
@@ -155,11 +157,25 @@ class Grid
             ros::Time minTime = timeSubstract(ros::Time::now(), m_ttl);
             while (!m_data[k]->empty() && m_data[k]->front().t < minTime)
                 m_data[k]->pop_front();
-            //TODO filtering
-            return (m_data[k] == NULL || m_data[k]->empty()) ? false : m_data[k]->back().p;
+            if (m_data[k]->empty())
+                return false;
+            
+            /**** Filtering ****/
+            double maxDelay = 1.0;
+            double tMin = m_data[k]->back().t.toSec() - maxDelay;
+            double sum = 0;
+            int n = 0;
+            for (std::list<BooleanPoint>::reverse_iterator rit = m_data[k]->rbegin() ; n < 100 && rit != m_data[k]->rend() ; rit++)
+            {
+                if (rit->t.toSec() < tMin)
+                    break;
+                sum += rit->p ? 1.0 : 0.0;
+                n++;
+            }
+            double mean = sum / n;
+            
+            return mean >= 0.5;
         }
-
-        
 
     public:
         Grid(double precision=0.1, ros::Duration ttl=ros::Duration(120.0), double minX=0, double maxX=10, double minY=0, double maxY=10):
@@ -398,10 +414,12 @@ class RobotPilot
     private:
         static const double ANGLE_PRECISION;  //deg
         static const int NB_CLOUDPOINTS;
+        static const double MAX_RANGE;
         
         ros::NodeHandle& m_node;
         ros::Publisher m_commandPub;    // Publisher to the robot's velocity command topic
         ros::Subscriber m_laserSub;     // Subscriber to the robot's laser scan topic
+        ros::Subscriber m_depthSub;
         double *m_ranges;
         bool m_simulation;
         ros::Time m_time;
@@ -448,37 +466,87 @@ class RobotPilot
 
             m_time = ros::Time::now();
         }
+        
+        //From https://github.com/ros-perception/pointcloud_to_laserscan/blob/indigo-devel/src/pointcloud_to_laserscan_nodelet.cpp
+        void pointCloudToLaserScan(const sensor_msgs::PointCloud2ConstPtr &cloud_msg, sensor_msgs::LaserScan& output)
+        {
+            output.angle_min = -M_PI/2;
+            output.angle_max = M_PI/2;
+            output.angle_increment = M_PI / 360.0;
+            output.time_increment = 0.0;
+            output.scan_time = 1.0 / 30.0;
+            output.range_min = 0.45;
+            output.range_max = 4.0;
 
-        // Process the incoming laser scan message
-        void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
+            //determine amount of rays to create
+            uint32_t ranges_size = std::ceil((output.angle_max - output.angle_min) / output.angle_increment);
+            output.ranges.assign(ranges_size, std::numeric_limits<double>::infinity());
+
+            // Iterate through pointcloud
+            for (sensor_msgs::PointCloud2ConstIterator<float>
+                    iter_x(*cloud_msg, "x"), iter_y(*cloud_msg, "y"), iter_z(*cloud_msg, "z");
+                    iter_x != iter_x.end();
+                    ++iter_x, ++iter_y, ++iter_z)
+            {
+
+                if (std::isnan(*iter_x) || std::isnan(*iter_y) || std::isnan(*iter_z))
+                    continue;
+
+                if (*iter_z > 1.0 || *iter_z < 0.0)
+                    continue;
+                
+                double range = hypot(*iter_x, *iter_y);
+                if (range < output.range_min)
+                    continue;
+
+                //ROS_INFO("Range at (%.3f, %.3f): %.3f", *iter_x, *iter_y, range);
+                
+                double angle = atan2(*iter_y, *iter_x);
+                if (angle < output.angle_min || angle > output.angle_max)
+                    continue;
+                
+                ROS_INFO("Range at angle %.3f: %.3f", angle*180/M_PI, range);
+
+                //overwrite range at laserscan ray if new range is smaller
+                int index = (angle - output.angle_min) / output.angle_increment;
+                if (range < output.ranges[index])
+                {
+                    output.ranges[index] = range;
+                }
+            }
+        }
+
+        void processLaserScan(const sensor_msgs::LaserScan& scan)
         {
             int maxIdx = ceil(360 / ANGLE_PRECISION);
-            int nbRanges = ceil((scan->angle_max - scan->angle_min) / scan->angle_increment);
+            int nbRanges = ceil((scan.angle_max - scan.angle_min) / scan.angle_increment);
             int prevAngleIdx = -1;
             ros::Time t = ros::Time::now();
             
             for (int i=0 ; i < nbRanges ; i++)
             {
-                double angle = modAngle(-(scan->angle_min + i * scan->angle_increment));
+                double range = std::min((double)scan.ranges[i], MAX_RANGE);
+                
+                double angle = modAngle((m_simulation ? (-1) : 1) * (scan.angle_min + i * scan.angle_increment));
                 int angleIdx = round(angle * 180 / (M_PI * ANGLE_PRECISION));
                 if (angleIdx >= maxIdx)
                     angleIdx = 0;
                 if (angleIdx != prevAngleIdx)
                 {
                     prevAngleIdx = angleIdx;
-                    m_ranges[angleIdx] = scan->ranges[i];
+                    m_ranges[angleIdx] = range;
                 }
-                else if (m_ranges[angleIdx] > scan->ranges[i])
-                    m_ranges[angleIdx] = scan->ranges[i];
+                else if (m_ranges[angleIdx] > range)
+                    m_ranges[angleIdx] = range;
                 
                 double cosAngle = cos(angle + m_position.z);
                 double sinAngle = sin(angle + m_position.z);
-                double endX = scan->ranges[i] * cosAngle + m_position.x;
-                double endY = scan->ranges[i] * sinAngle + m_position.y;
+                double endX = range * cosAngle + m_position.x;
+                double endY = range * sinAngle + m_position.y;
                 m_grid.addPoint(endX, endY, t, true);
                 
                 double dstep = m_grid.precision();
-                double dmax = scan->ranges[i] - dstep;
+                double dmax = range - dstep;
                 for (double d=dstep ; d <= dmax ; d += dstep)
                 {
                     double x = d * cosAngle + m_position.x;
@@ -489,10 +557,24 @@ class RobotPilot
                 int cloudPointIdx = (i+m_cloudPointsStartIdx) % NB_CLOUDPOINTS;
                 m_cloudPoints[cloudPointIdx].x = endX;
                 m_cloudPoints[cloudPointIdx].y = endY;
+                //ROS_INFO("Added cloud point (%.3f, %.3f)", endX, endY);
             }
             m_cloudPointsStartIdx += nbRanges;
         }
 
+        // Process the incoming laser scan message
+        void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
+        {
+            //processLaserScan(*scan);
+        }
+        
+        void depthCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
+        {
+            sensor_msgs::LaserScan scan;
+            pointCloudToLaserScan(cloud, scan);
+            processLaserScan(scan);
+        }
+        
         bool proximityAlert()
         {
             int idx = ceil(45 / ANGLE_PRECISION);
@@ -548,18 +630,25 @@ class RobotPilot
             }
 
             // Subscribe to the robot's laser scan topic
-            m_laserSub = m_node.subscribe("/scan", 1, &RobotPilot::scanCallback, this);
+            m_laserSub = m_node.subscribe<sensor_msgs::LaserScan>("/scan", 1, &RobotPilot::scanCallback, this);
             ROS_INFO("Waiting for laser scan...");
             ros::Rate rate(10);
             while (ros::ok() && m_laserSub.getNumPublishers() <= 0)
                 rate.sleep();
             checkRosOk_v();
             
+            // Subscribe to the robot's depth cloud topic
+            m_depthSub = m_node.subscribe<sensor_msgs::PointCloud2>("/camera/depth/points", 1, &RobotPilot::depthCallback, this);
+            ROS_INFO("Waiting for depth cloud...");
+            while (ros::ok() && m_depthSub.getNumPublishers() <= 0)
+                rate.sleep();
+            checkRosOk_v();
+            
             // Advertise a new publisher for the robot's velocity command topic
             m_commandPub = m_node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 10);
             ROS_INFO("Waiting for a robot to control...");
-            while (ros::ok() && m_commandPub.getNumSubscribers() <= 0)
-                rate.sleep();
+            /*while (ros::ok() && m_commandPub.getNumSubscribers() <= 0)
+                rate.sleep();*/
             checkRosOk_v();
 
             m_time = ros::Time::now();
@@ -597,7 +686,7 @@ class RobotPilot
                     targetPoint.y = 10 * (rand() / (double)RAND_MAX);
                 }
 
-                if (!goTo(targetPoint, (targetETA - ros::Time::now()).toSec()))
+                /*if (!goTo(targetPoint, (targetETA - ros::Time::now()).toSec()))
                 {
                     if (!isStuck)
                     {
@@ -606,7 +695,7 @@ class RobotPilot
                     }
                 }
                 else
-                    isStuck = false;
+                    isStuck = false;*/
                 
                 updateDisplay(targetPoint);
                 rate.sleep();
@@ -649,6 +738,7 @@ const int RobotPilot::NB_CLOUDPOINTS = 1000;
 const double RobotPilot::MIN_PROXIMITY_RANGE = 0.5; // Should be smaller than sensor_msgs::LaserScan::range_max
 const double RobotPilot::MAX_LINEARSPEED = 0.5;
 const double RobotPilot::MAX_ANGULARSPEED = M_PI/4;
+const double RobotPilot::MAX_RANGE = 15.0;
 
 
 int main(int argc, char **argv)
