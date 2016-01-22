@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <package>
-  <name>movement</name>
+  <name>super_mario</name>
   <version>0.0.0</version>
-  <description>The movement package</description>
+  <description>The super_mario package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="ga76jug@todo.todo">ga76jug</maintainer>
+  <maintainer email="masltov@todo.todo">masltov</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but mutiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/movement</url> -->
+  <!-- <url type="website">http://wiki.ros.org/super_mario</url> -->
 
 
   <!-- Author tags are optional, mutiple are allowed, one per tag -->
@@ -40,8 +40,7 @@
   <!-- Use test_depend for packages you need only for testing: -->
   <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
- <build_depend>detect_marker</build_depend>
- <run_depend>detect_marker</run_depend>
+
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

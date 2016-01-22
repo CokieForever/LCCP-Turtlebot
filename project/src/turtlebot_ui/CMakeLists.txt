@@ -1,21 +1,53 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(movement)
+project(turtlebot_ui)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED roscpp tf cv_bridge
+find_package(catkin REQUIRED COMPONENTS
+  aruco
+  roscpp
   std_msgs
   cv_bridge
   sensor_msgs
-  image_transport
-  message_generation
-  )
+)
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Qt4 COMPONENTS QtCore QtGui REQUIRED)
 
 
+include(${QT_USE_FILE})
+add_definitions(-DQT_NO_KEYWORDS)
+add_definitions(${QT_DEFINITIONS})
+
+set(HEADER_FILES
+  src/mainwindow.h
+src/detectmarker/detectmarker.h
+ )
+
+set(SOURCE_FILES
+  src/mainwindow.cpp
+  src/main.cpp
+    src/detectmarker/detectmarker.cpp
+  ${MOC_FILES}
+)
+
+set(FORM_FILES
+  src/mainwindow.ui
+)
+
+QT4_WRAP_CPP(MOC_SRC_H
+  ${HEADER_FILES}
+)
+
+QT4_WRAP_UI(MOC_GUI_H
+  ${FORM_FILES}
+)
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+add_executable(turtlebot_gui ${SOURCE_FILES} ${MOC_SRC_H} ${MOC_GUI_H})
+target_link_libraries(turtlebot_gui ${QT_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBS})
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
@@ -103,7 +135,7 @@ find_package(catkin REQUIRED roscpp tf cv_bridge
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES movement
+#  LIBRARIES turtlebot_ui
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
@@ -117,24 +149,22 @@ catkin_package(
 # include_directories(include)
 
 ## Declare a C++ library
-# add_library(movement
-#   src/${PROJECT_NAME}/movement.cpp
+# add_library(turtlebot_ui
+#   src/${PROJECT_NAME}/turtlebot_ui.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(movement ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(turtlebot_ui ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-add_executable(mover src/movement.cpp src/run_mover)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(movement_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(turtlebot_ui_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 #############
 ## Install ##
@@ -151,7 +181,7 @@ target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS movement movement_node
+# install(TARGETS turtlebot_ui turtlebot_ui_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -176,7 +206,7 @@ target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_movement.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_turtlebot_ui.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
