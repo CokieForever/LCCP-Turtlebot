@@ -26,7 +26,7 @@ class DetectMarker
 
         void cameraSubCallback(const sensor_msgs::Image::ConstPtr& msg);
         bool ComputeLinesIntersection(Point linePoints1[2], Point linePoints2[2], Point *isectPoint);
-        bool ComputerQuadrilateralCenter(Point points[4], Point *centerPoint);
+        bool ComputeQuadrilateralCenter(Point points[4], Point *centerPoint);
         void drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &markers );
         
         void Deinterlace(const cv::Mat& frame, cv::Mat** field1, cv::Mat** field2=NULL);

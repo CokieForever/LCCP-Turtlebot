@@ -113,7 +113,7 @@ void DetectMarker::drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &mar
             corners[j].y = marker[j].y;
         }
         
-        if (!ComputerQuadrilateralCenter(corners, &center))
+        if (!ComputeQuadrilateralCenter(corners, &center))
             ROS_WARN("Unable to compute center.");
         else
         {
@@ -157,7 +157,7 @@ bool DetectMarker::ComputeLinesIntersection(Point linePoints1[2], Point linePoin
     return true;
 }
 
-bool DetectMarker::ComputerQuadrilateralCenter(Point points[4], Point *centerPoint)
+bool DetectMarker::ComputeQuadrilateralCenter(Point points[4], Point *centerPoint)
 {
     Point linePoints1[2] = {points[0], points[2]};
     Point linePoints2[2] = {points[1], points[3]};
