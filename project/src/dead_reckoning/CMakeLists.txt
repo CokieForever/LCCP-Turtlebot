@@ -104,6 +104,7 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(deadreckoning src/deadreckoning.cpp)
+add_executable(sensordisplay src/sensordisplay.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -111,6 +112,11 @@ add_executable(deadreckoning src/deadreckoning.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(deadreckoning
+  ${catkin_LIBRARIES}
+  ${roscpp_LIBRARIES}
+  SDL
+)
+target_link_libraries(sensordisplay
   ${catkin_LIBRARIES}
   ${roscpp_LIBRARIES}
   SDL
