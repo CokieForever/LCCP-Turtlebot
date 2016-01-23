@@ -1,0 +1,4 @@
+# Interface name.
+string interface_name
+---
+InterfaceInfo interface_info
