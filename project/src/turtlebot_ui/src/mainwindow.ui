@@ -6,25 +6,134 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>841</width>
+    <height>516</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Turtlebot User Interface</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QPushButton" name="btnMarkerDetection">
+   <widget class="QFrame" name="frame">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>50</y>
-      <width>191</width>
-      <height>27</height>
+      <x>0</x>
+      <y>0</y>
+      <width>195</width>
+      <height>136</height>
      </rect>
     </property>
-    <property name="text">
-     <string>Start Marker Detection</string>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>What do you want to do?</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QPushButton" name="btnMarkerDetection">
+       <property name="text">
+        <string>Start Marker Detection</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QPushButton" name="btnSearchMarkers">
+       <property name="text">
+        <string>Search aruco markers</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QPushButton" name="btnPlaySuperMario">
+       <property name="text">
+        <string>Play super mario</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QFrame" name="frame_2">
+    <property name="geometry">
+     <rect>
+      <x>410</x>
+      <y>0</y>
+      <width>431</width>
+      <height>81</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+    <layout class="QGridLayout" name="gridLayout_2">
+     <item row="1" column="1">
+      <widget class="QTextBrowser" name="txtbStatus"/>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Status:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QFrame" name="qfLiveVideo">
+    <property name="geometry">
+     <rect>
+      <x>410</x>
+      <y>120</y>
+      <width>431</width>
+      <height>331</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+    <widget class="QLabel" name="labelFrame">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>411</width>
+       <height>321</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QFrame" name="frame_4">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>290</y>
+      <width>231</width>
+      <height>151</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
     </property>
    </widget>
   </widget>
@@ -33,7 +142,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>400</width>
+     <width>841</width>
      <height>27</height>
     </rect>
    </property>

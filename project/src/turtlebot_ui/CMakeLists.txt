@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   cv_bridge
   sensor_msgs
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -21,14 +22,19 @@ add_definitions(-DQT_NO_KEYWORDS)
 add_definitions(${QT_DEFINITIONS})
 
 set(HEADER_FILES
+  src/detect_marker/detectmarker.h
+  src/detect_marker/detect.hpp
   src/mainwindow.h
-src/detectmarker/detectmarker.h
+
+
  )
 
 set(SOURCE_FILES
+  src/detect_marker/detectmarker.cpp
+  src/detect_marker/detect.cpp
   src/mainwindow.cpp
   src/main.cpp
-    src/detectmarker/detectmarker.cpp
+
   ${MOC_FILES}
 )
 
@@ -46,8 +52,9 @@ QT4_WRAP_UI(MOC_GUI_H
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-add_executable(turtlebot_gui ${SOURCE_FILES} ${MOC_SRC_H} ${MOC_GUI_H})
-target_link_libraries(turtlebot_gui ${QT_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBS})
+#add_executable(turtlebot_gui ${SOURCE_FILES} ${MOC_SRC_H} ${MOC_GUI_H})
+#target_link_libraries(turtlebot_gui ${QT_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
@@ -83,7 +90,16 @@ target_link_libraries(turtlebot_gui ${QT_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV
 #   Message1.msg
 #   Message2.msg
 # )
-
+add_message_files(
+  FILES
+  MarkersInfos.msg
+  MarkerInfo.msg
+)
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
+catkin_package(CATKIN_DEPENDS message_runtime)
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
@@ -147,7 +163,9 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
-
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+)
 ## Declare a C++ library
 # add_library(turtlebot_ui
 #   src/${PROJECT_NAME}/turtlebot_ui.cpp
@@ -165,7 +183,8 @@ catkin_package(
 # add_dependencies(turtlebot_ui_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-
+add_executable(turtlebot_gui ${SOURCE_FILES} ${MOC_SRC_H} ${MOC_GUI_H})
+target_link_libraries(turtlebot_gui ${QT_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBS})
 #############
 ## Install ##
 #############
