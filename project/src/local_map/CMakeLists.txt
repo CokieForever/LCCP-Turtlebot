@@ -1,14 +1,21 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(dead_reckoning)
+project(local_map)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  rosconsole
+find_package(catkin REQUIRED
+  COMPONENTS
+  angles
+  geometry_msgs
+  lama_msgs
+  map_ray_caster
+  message_generation
+  nav_msgs
   roscpp
-  rostime
-)
+  sensor_msgs
+  tf
+  )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -51,11 +58,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  SaveMap.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -65,10 +71,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
+generate_messages(
 #   DEPENDENCIES
 #   std_msgs  # Or other packages containing msgs
-# )
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -80,10 +86,23 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES dead_reckoning
-#  CATKIN_DEPENDS rosconsole roscpp rostime
-#  DEPENDS system_lib
+  INCLUDE_DIRS
+  include
+
+  # LIBRARIES local_map 
+
+  CATKIN_DEPENDS
+  angles
+  geometry_msgs
+  lama_msgs
+  map_ray_caster
+  message_runtime
+  nav_msgs
+  roscpp
+  sensor_msgs
+  tf
+
+  #  DEPENDS system_lib
 )
 
 ###########
@@ -92,35 +111,24 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
 include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
-)
+  )
 
 ## Declare a cpp library
-# add_library(dead_reckoning
-#   src/${PROJECT_NAME}/dead_reckoning.cpp
-# )
+# add_library(map_ray_caster src/map_ray_caster.cpp)
 
 ## Declare a cpp executable
-add_executable(deadreckoning src/deadreckoning.cpp)
-add_executable(sensordisplay src/sensordisplay.cpp)
+set(SRC ${SRC} src/map_builder.cpp)
+add_executable(local_map src/local_map_node.cpp ${SRC})
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(dead_reckoning_node dead_reckoning_generate_messages_cpp)
+add_dependencies(local_map local_map_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(deadreckoning
-  ${catkin_LIBRARIES}
-  ${roscpp_LIBRARIES}
-  SDL
-)
-target_link_libraries(sensordisplay
-  ${catkin_LIBRARIES}
-  ${roscpp_LIBRARIES}
-  SDL
-)
+target_link_libraries(local_map ${catkin_LIBRARIES})
 
 #############
 ## Install ##
@@ -137,11 +145,11 @@ target_link_libraries(sensordisplay
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS dead_reckoning dead_reckoning_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+install(TARGETS local_map
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark cpp header files for installation
 # install(DIRECTORY include/${PROJECT_NAME}/
@@ -162,9 +170,9 @@ target_link_libraries(sensordisplay
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_dead_reckoning.cpp)
+catkin_add_gtest(${PROJECT_NAME}-test test/utest.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
+# target_link_libraries(${PROJECT_NAME}-test ${catkin_LIBRARIES} map_builder)
 # endif()
 
 ## Add folders to be run by python nosetests

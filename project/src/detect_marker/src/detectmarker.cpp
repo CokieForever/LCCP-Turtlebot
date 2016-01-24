@@ -37,82 +37,71 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
         ROS_ERROR("cv_bridge exception: %s", ex.what());
         exit(-1);
     }
-
-
+    
     aruco::MarkerDetector detector;
     std::vector<aruco::Marker> markers;
     
-
     detector.detect(img, markers);
 
     int nbMarkers = markers.size();
     ROS_INFO("Amount of markers: %d", nbMarkers);
-
-
-
-
+    
     if (nbMarkers==0)
     {
-	    int width = img.cols;
-    	    int height = img.rows;
-    	    int channels = img.channels();
-    	    ROS_INFO("Raw Image size: %dx%dx%d", width, height, channels);
-    	    if (img.cols <= 0 || img.rows <= 0)
-    		{
-        	ROS_WARN("Received emtpy / unconventional image.");
-        	return;
-    		}
+        int width = img.cols;
+        int height = img.rows;
+        int channels = img.channels();
+        ROS_INFO("Raw Image size: %dx%dx%d", width, height, channels);
+        if (img.cols <= 0 || img.rows <= 0)
+        {
+            ROS_WARN("Received emtpy / unconventional image.");
+            return;
+        }
     
-
-	cv::Size smallSize(width /2 ,height /2);
-	cv::Mat dst;
-    	cv::Mat smallImages;
-	for  ( int y =  0 ; y <img.rows-smallSize.height+2 ; y += height/2 )
-	{
-
-    		for  ( int x =  0 ; x <img.cols-smallSize.width+2 ; x +=width/2 )
-    		{
-
-			cv::Rect rect = cv::Rect(x, y, smallSize.width, smallSize.height);
-        		cout << x << " " << y << " " << smallSize.width << " " << smallSize.height << endl;
-			ROS_INFO("Image size: %dx%dx%dx%d", x, y, smallSize.width, smallSize.height);
-        		smallImages.push_back(cv::Mat(img, rect));
-			resize(cv::Mat(img, rect), dst, img.size(), 0, 0, CV_INTER_LINEAR); 
-			detector.detect(dst,markers);
-			cv::Mat frame = dst;
-			drawingMarkers(frame, markers);
-
-    		}
-	}
+        cv::Size smallSize(width /2 ,height /2);
+        cv::Mat dst;
+        cv::Mat smallImages;
+        for  ( int y =  0 ; y <img.rows-smallSize.height+2 ; y += height/2 )
+        {
+            for  ( int x =  0 ; x <img.cols-smallSize.width+2 ; x +=width/2 )
+            {
+                cv::Rect rect = cv::Rect(x, y, smallSize.width, smallSize.height);
+                cout << x << " " << y << " " << smallSize.width << " " << smallSize.height << endl;
+                ROS_INFO("Image size: %dx%dx%dx%d", x, y, smallSize.width, smallSize.height);
+                smallImages.push_back(cv::Mat(img, rect));
+                resize(cv::Mat(img, rect), dst, img.size(), 0, 0, CV_INTER_LINEAR); 
+                detector.detect(dst,markers);
+                cv::Mat frame = dst;
+                drawingMarkers(frame, markers);
+            }
+        }
     }
     else
-   {
-	detector.detect(img,markers);
-	cv::Mat frame=img;
-	drawingMarkers(frame, markers);
-   }
-
-
+    {
+        detector.detect(img,markers);
+        cv::Mat frame=img;
+        drawingMarkers(frame, markers);
+    }
 
 }
 
 void DetectMarker::drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &markers )
 {
-	cv::Scalar colorScalar(255,155,0, 0);
-	detect_marker::MarkersInfos markersInfos;
-	int width = frame.cols;
-    	int height = frame.rows;
-    	int channels = frame.channels();
-    	ROS_INFO("Image size: %dx%dx%d", width, height, channels);
-    	if (frame.cols <= 0 || frame.rows <= 0)
-    	{
-        	ROS_WARN("Received emtpy / unconventional image.");
-        	return;
-    	}
+    cv::Scalar colorScalar(255,155,0, 0);
+    detect_marker::MarkersInfos markersInfos;
+    int width = frame.cols;
+    int height = frame.rows;
+    int channels = frame.channels();
+    ROS_INFO("Image size: %dx%dx%d", width, height, channels);
+    if (frame.cols <= 0 || frame.rows <= 0)
+    {
+        ROS_WARN("Received emtpy / unconventional image.");
+        return;
+    }
     
-	int nbMarkers=markers.size();
-	for (int i=0 ; i < nbMarkers ; i++)
-    	{
+    int nbMarkers=markers.size();
+    for (int i=0 ; i < nbMarkers ; i++)
+    {
         aruco::Marker& marker = markers[i];
         marker.draw(frame, colorScalar);
 
@@ -124,17 +113,19 @@ void DetectMarker::drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &mar
             corners[j].y = marker[j].y;
         }
         
-        if (!ComputerQuadrilateralCenter(corners, &center))
+        if (!ComputeQuadrilateralCenter(corners, &center))
             ROS_WARN("Unable to compute center.");
         else
         {
+            double markerHeight = (std::max(corners[2].y, corners[3].y) - std::min(corners[0].y, corners[1].y)) / (double)height;
             detect_marker::MarkerInfo markerInfo;
             markerInfo.x = 2*(center.x/(double)width)-1;
             markerInfo.y = 2*(center.y/(double)height)-1;
+            markerInfo.d = MARKER_REF_DIST / markerHeight;
             markerInfo.id = marker.id;
             markersInfos.infos.push_back(markerInfo);
-
-            ROS_INFO("Marker %d: (%.3f, %.3f)", markerInfo.id, markerInfo.x, markerInfo.y);
+            
+            ROS_INFO("Marker %d: pos = (%.3f, %.3f); d = %.3f", markerInfo.id, markerInfo.x, markerInfo.y, markerInfo.d);
         }
     }
     
@@ -144,8 +135,6 @@ void DetectMarker::drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &mar
     cv::imshow("Marker Detection", frame);
     cv::waitKey(1);
 }
-
-
 
 bool DetectMarker::ComputeLinesIntersection(Point linePoints1[2], Point linePoints2[2], Point *isectPoint)
 {
@@ -168,7 +157,7 @@ bool DetectMarker::ComputeLinesIntersection(Point linePoints1[2], Point linePoin
     return true;
 }
 
-bool DetectMarker::ComputerQuadrilateralCenter(Point points[4], Point *centerPoint)
+bool DetectMarker::ComputeQuadrilateralCenter(Point points[4], Point *centerPoint)
 {
     Point linePoints1[2] = {points[0], points[2]};
     Point linePoints2[2] = {points[1], points[3]};

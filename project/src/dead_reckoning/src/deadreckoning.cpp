@@ -3,6 +3,10 @@
 #include <sensor_msgs/LaserScan.h>
 #include <complex>
 #include <SDL/SDL.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud2_iterator.h>
+#include <sensor_msgs/Imu.h>
+#include <nav_msgs/OccupancyGrid.h>
 
 #include "../../utilities.h"
 
@@ -113,65 +117,34 @@ static void drawLine(SDL_Surface *surf, float x1, float y1, float x2, float y2, 
     SDL_UnlockSurface(surf);
 }
 
-struct BooleanPoint
+struct ProbabilisticPoint
 {
     double x, y;
     ros::Time t;
-    bool p;
+    double p;
 };
 
 class Grid
 {
     private:
-        static ros::Time timeSubstract(const ros::Time& t, const ros::Duration& d)
-        {
-            return t.toSec() > d.toSec() ? (t-d) : ros::Time(0);   
-        }
-        
         double m_precision;
         ros::Duration m_ttl;
         double m_minX, m_maxX, m_minY, m_maxY;
-        std::list<BooleanPoint>** m_data;
+        ProbabilisticPoint** m_data;
         int m_height, m_width;
-
-        void updateSize()
-        {
-            m_minX = m_precision * round(m_minX / m_precision);
-            m_minY = m_precision * round(m_minY / m_precision);
-            m_maxX = m_precision * round(m_maxX / m_precision);
-            m_maxY = m_precision * round(m_maxY / m_precision);
-            m_height = round((m_maxY - m_minY) / m_precision);
-            m_width = round((m_maxX - m_minX) / m_precision);
-        }
+        bool m_expendable;
         
-        bool _get(int ix, int iy)
-        {
-            if (ix >= m_width || iy >= m_height)
-                return false;
-            
-            int k = ix*m_height+iy;
-            if (m_data[k] == NULL)
-                return false;
-            ros::Time minTime = timeSubstract(ros::Time::now(), m_ttl);
-            while (!m_data[k]->empty() && m_data[k]->front().t < minTime)
-                m_data[k]->pop_front();
-            //TODO filtering
-            return (m_data[k] == NULL || m_data[k]->empty()) ? false : m_data[k]->back().p;
-        }
-
-        
-
-    public:
-        Grid(double precision=0.1, ros::Duration ttl=ros::Duration(120.0), double minX=0, double maxX=10, double minY=0, double maxY=10):
-            m_precision(precision), m_ttl(ttl), m_minX(minX), m_maxX(maxX), m_minY(minY), m_maxY(maxY)
+        void init()
         {
             updateSize();
-            m_data = new std::list<BooleanPoint>*[m_height*m_width];
+            m_data = new ProbabilisticPoint*[m_height*m_width];
             //TODO check if m_data != NULL
-            memset(m_data, 0, sizeof(std::list<BooleanPoint>*)*m_height*m_width);
+            memset(m_data, 0, sizeof(ProbabilisticPoint*)*m_height*m_width);
+            
+            //ROS_INFO("(%d x %d) = %d", m_width, m_height, m_height*m_width);
         }
-
-        ~Grid()
+        
+        void empty()
         {
             if (m_data != NULL)
             {
@@ -182,7 +155,63 @@ class Grid
                         delete m_data[i];
                 }
                 delete m_data;
+                m_data = NULL;
             }
+        }
+
+        void updateSize()
+        {
+            m_minX = m_precision * round(m_minX / m_precision);
+            m_minY = m_precision * round(m_minY / m_precision);
+            m_maxX = m_precision * round(m_maxX / m_precision);
+            m_maxY = m_precision * round(m_maxY / m_precision);
+            m_height = round((m_maxY - m_minY) / m_precision)+1;
+            m_width = round((m_maxX - m_minX) / m_precision)+1;
+        }
+        
+        double _get(int ix, int iy)
+        {
+            if (ix < 0 || iy < 0 || ix >= m_width || iy >= m_height)
+                return -1;
+            
+            int k = ix*m_height+iy;
+            int minTime = ros::Time::now().toSec() - m_ttl.toSec();
+            if (m_data[k] == NULL || m_data[k]->t.toSec() < minTime)
+                return -1;
+            
+            return m_data[k]->p;
+        }
+
+    public:
+        Grid(double precision=0.05, ros::Duration ttl=ros::Duration(120.0), double minX=-10, double maxX=10, double minY=-10, double maxY=10, bool expendable=true):
+            m_precision(precision), m_ttl(ttl), m_minX(minX), m_maxX(maxX), m_minY(minY), m_maxY(maxY), m_expendable(expendable)
+        {
+            init();
+        }
+        
+        Grid(const Grid& grid):
+            m_precision(grid.m_precision), m_ttl(grid.m_ttl), m_minX(grid.m_minX), m_maxX(grid.m_maxX), m_minY(grid.m_minY), m_maxY(grid.m_maxY), m_expendable(grid.m_expendable)
+        {
+            init();            
+        }
+        
+        Grid& operator=(const Grid& grid)
+        {
+            empty();
+            m_precision = grid.m_precision;
+            m_ttl = grid.m_ttl;
+            m_minX = grid.m_minX;
+            m_maxX = grid.m_maxX;
+            m_minY = grid.m_minY;
+            m_maxY = grid.m_maxY;
+            m_expendable = grid.m_expendable;
+            init();
+            return *this;
+        }
+        
+        ~Grid()
+        {
+            empty();
         }
         
         double precision() const
@@ -190,13 +219,13 @@ class Grid
             return m_precision;
         }
 
-        void addPoint(double x, double y, ros::Time t, bool p)
+        bool addPoint(double x, double y, ros::Time t, double p)
         {
-            BooleanPoint point = {x, y, t, p};
-            addPoint(point);
+            ProbabilisticPoint point = {x, y, t, p};
+            return addPoint(point);
         }
         
-        void addPoint(BooleanPoint point)
+        bool addPoint(ProbabilisticPoint point)
         {
             double x = m_precision * round(point.x / m_precision);
             double y = m_precision * round(point.y / m_precision);
@@ -205,7 +234,9 @@ class Grid
 
             if (x < m_minX || x > m_maxX || y < m_minY || y > m_maxX)
             {
-                return;
+                //ROS_INFO("Out of grid: (%.3f, %.3f)", x, y);
+                if (!m_expendable)
+                    return false;
 
                 //ROS_INFO("Resizing grid");
 
@@ -230,45 +261,41 @@ class Grid
                 int prevWidth = m_width;
                 int prevHeight = m_height;
                 updateSize();
-                std::list<BooleanPoint>** newData = new std::list<BooleanPoint>*[m_height*m_width];
-                memset(newData, 0, sizeof(std::list<BooleanPoint>*)*m_height*m_width);
+                ProbabilisticPoint** newData = new ProbabilisticPoint*[m_height*m_width];
+                memset(newData, 0, sizeof(ProbabilisticPoint*)*m_height*m_width);
                 
                 for (int i=0 ; i < prevWidth ; i++)
-                    memcpy(&(newData[(i+xShift)*m_height+yShift]), &(m_data[prevHeight*i]), sizeof(std::list<BooleanPoint>*)*prevHeight);
+                    memcpy(&(newData[(i+xShift)*m_height+yShift]), &(m_data[prevHeight*i]), sizeof(ProbabilisticPoint*)*prevHeight);
                 
                 delete m_data;
                 m_data = newData;
             }
             
-            int ix = round((point.x-m_minX) / m_precision);
-            int iy = round((point.y-m_minY) / m_precision);
+            int ix = round((x-m_minX) / m_precision);
+            int iy = round((y-m_minY) / m_precision);
             //ROS_INFO("Grid coord: (%d, %d)", ix, iy);
+            //ROS_INFO("(%d x %d)", m_width, m_height);
             
             int k = ix*m_height+iy;
+            //ROS_INFO("%d", k);
+            //ROS_INFO("%lu", sizeof(m_data)/sizeof(std::list<BooleanPoint>*));
             
             if (m_data[k] == NULL)
-                m_data[k] = new std::list<BooleanPoint>;
-            ros::Time minTime = timeSubstract(ros::Time::now(), m_ttl);
-            int n = m_data[k]->size();
-            while (n > 100 || (n > 0 && m_data[k]->front().t < minTime))
-            {
-                m_data[k]->pop_front();
-                n--;
-            }
-            if (m_data[k]->empty() || m_data[k]->back().t < point.t)
-                m_data[k]->push_back(point);
+                m_data[k] = new ProbabilisticPoint;
+            *(m_data[k]) = point;
 
             //ROS_INFO("Added to grid");
+            return true;
         }
         
-        bool get(double x, double y)
+        double get(double x, double y)
         {
             int ix = round((x-m_minX) / m_precision);
             int iy = round((y-m_minY) / m_precision);
             return _get(ix, iy);
         }
         
-        SDL_Surface* draw(int w, int h, SDL_Color color, SDL_Surface *surf=NULL)
+        SDL_Surface* draw(int w, int h, double minX, double maxX, double minY, double maxY, SDL_Surface *surf=NULL)
         {
             //ROS_INFO("Drawing grid");
             if (surf == NULL)
@@ -277,17 +304,19 @@ class Grid
                 return NULL;
             
             //ROS_INFO("Surface created");
-            Uint32 pixel = SDL_MapRGB(surf->format, color.r, color.g, color.b);
             SDL_LockSurface(surf);
             for (int y=0 ; y < h ; y++)
             {
-                int ix = y * m_height / h;
+                double fy = (h-y) * (maxY-minY) / h + minY;
                 for (int x=0 ;  x < w ; x++)
                 {
-                    int iy = x * m_width / w;
+                    double fx = x * (maxX-minX) / w + minX;
                     //ROS_INFO("Drawing at (%d,%d) (%d, %d)", ix, iy, x, y);
-                    if (_get(ix, iy))
-                        putPixel(surf, x, h-y, pixel, true);
+                    double p = get(fx, fy);
+                    if (p >= 0)
+                        putPixel(surf, x, y, SDL_MapRGB(surf->format, 255, 255*(1-p), 255*(1-p)), false);
+                    else
+                        putPixel(surf, x, y, SDL_MapRGB(surf->format, 200, 200, 255), false);
                 }
             }
             SDL_UnlockSurface(surf);
@@ -297,131 +326,55 @@ class Grid
         }
 };
 
-class MyLittleDisplay
-{
-    private:
-        int m_width;
-        int m_height;
-        double m_maxX;
-        double m_maxY;
-        SDL_Surface *m_screen;
-        SDL_Surface *m_robotSurf;
-        bool m_ok;
-
-        void blitRobot(int x, int y)
-        {
-            if (!m_robotSurf)
-                return;
-            
-            SDL_Rect rect;
-            rect.x = x-m_robotSurf->w/2;
-            rect.y = y-m_robotSurf->h/2;
-            SDL_BlitSurface(m_robotSurf, NULL, m_screen, &rect);
-        }
-
-    public:
-        MyLittleDisplay(int w, int h, double maxX=0, double maxY=0): m_width(w), m_height(h), m_maxX(maxX), m_maxY(maxY), m_ok(false)
-        {
-            m_width = max(100, m_width);
-            m_height = max(100, m_height);
-            if (m_maxX <= 0)
-                m_maxX = m_height;
-            if (m_maxY <= 0)
-                m_maxY = m_width;
-            
-            if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
-            {
-                ROS_ERROR("Unable to initialize the SDL.");
-                return;
-            }
-
-            m_screen = SDL_SetVideoMode(m_width, m_height, 32, SDL_SWSURFACE);
-            if (!m_screen)
-            {
-                ROS_ERROR("Unable to create display window.");
-                return;
-            }
-            SDL_Flip(m_screen);
-
-            m_robotSurf = SDL_CreateRGBSurface(SDL_HWSURFACE, 20, 20, 32, 0,0,0,0);
-            if (!m_robotSurf)
-            {
-                ROS_ERROR("Unable to create the robot bitmap.");
-                return;
-            }
-            SDL_FillRect(m_robotSurf, NULL, SDL_MapRGB(m_robotSurf->format, 0,0,0));
-
-            m_ok = true;
-        }
-
-        ~MyLittleDisplay()
-        {
-            if (m_robotSurf)
-                SDL_FreeSurface(m_robotSurf);
-            SDL_Quit();
-        }
-
-        bool isOK()
-        {
-            return m_ok;
-        }
-
-        void update(Vector pos, Vector speed, Vector acceleration, Vector *cloudPoints, size_t nbPoints, Vector targetPoint, Grid& grid)
-        {
-            SDL_Surface *gridSurf = SDL_CreateRGBSurface(SDL_HWSURFACE, m_width, m_height, 32,0,0,0,0);
-            SDL_FillRect(gridSurf, NULL, SDL_MapRGB(gridSurf->format, 255,255,255));
-            grid.draw(m_width, m_height, createColor(128,128,128), gridSurf);
-            SDL_Rect rect = {0};
-            SDL_BlitSurface(gridSurf, NULL, m_screen, &rect);
-            
-            double kx = m_width / m_maxY;
-            double ky = m_height / m_maxX;
-            
-            Uint32 black = SDL_MapRGB(m_screen->format, 0,0,0);
-            for (int i=0 ; i < nbPoints ; i++)
-            {
-                if (!isnan(cloudPoints[i].x) && !isnan(cloudPoints[i].y))
-                    putPixel(m_screen, cloudPoints[i].y * kx, m_height - cloudPoints[i].x * ky, black);
-            }
-
-            blitRobot(pos.y * kx, m_height - pos.x * ky);
-            drawLine(m_screen, pos.y*kx, m_height-pos.x*ky, (pos.y+speed.y*5)*kx, m_height-(pos.x+speed.x*5)*ky, createColor(0,0,255));
-            drawLine(m_screen, pos.y*kx, m_height-pos.x*ky, (pos.y+acceleration.y*5)*kx, m_height-(pos.x+acceleration.x*5)*ky, createColor(255,0,0));
-            drawLine(m_screen, pos.y*kx, m_height-pos.x*ky, targetPoint.y*kx, m_height-targetPoint.x*ky, createColor(255,128,0));
-
-            SDL_Flip(m_screen);
-        }
-};
-
 class RobotPilot
 {
     private:
         static const double ANGLE_PRECISION;  //deg
         static const int NB_CLOUDPOINTS;
+        static const double MAX_RANGE;
+        static const double MIN_PROXIMITY_RANGE;
+        static const double MAX_LINEARSPEED;
+        static const double MAX_ANGULARSPEED;
+        static const int SCREEN_HEIGHT = 600;
+        static const int SCREEN_WIDTH = 600;
         
         ros::NodeHandle& m_node;
-        ros::Publisher m_commandPub;    // Publisher to the robot's velocity command topic
-        ros::Subscriber m_laserSub;     // Subscriber to the robot's laser scan topic
+        ros::Subscriber m_orderSub;
+        ros::Subscriber m_laserSub;
+        ros::Publisher m_laserPub;
+        ros::Subscriber m_depthSub;
+        ros::Subscriber m_imuSub;
+        ros::Subscriber m_localMapSub;
         double *m_ranges;
         bool m_simulation;
         ros::Time m_time;
         geometry_msgs::Vector3 m_position;
+        double m_startOrientation;
         double m_linearSpeed;
         double m_angularSpeed;
-        geometry_msgs::Vector3 m_targetPoint;
         Vector *m_cloudPoints;
         int m_cloudPointsStartIdx;
         Grid m_grid;
-        MyLittleDisplay m_display;
+        SDL_Surface *m_screen;
+        SDL_Surface *m_robotSurf;
+        SDL_Surface *m_gridSurf;
+        double m_minX, m_maxX, m_minY, m_maxY;
         
         static double modAngle(double rad)
         {
             return fmod(fmod(rad, 2*M_PI) + 2*M_PI, 2*M_PI);
         }
 
-        // Send a velocity command
-        void sendMoveOrder(double lin, double ang)
+        void IMUCallback(const sensor_msgs::Imu::ConstPtr& imu)
         {
+            if (!m_simulation)
+                m_position.z = modAngle(2*asin(imu->orientation.z));
+        }
+        
+        void moveOrderCallback(const geometry_msgs::Twist::ConstPtr& order)
+        {
+            //ROS_INFO("Received order: v=%.3f, r=%.3f", order->linear.x, order->angular.z);
+            
             double deltaTime = (ros::Time::now() - m_time).toSec();
             
             if (fabs(m_angularSpeed) > 1e-5)
@@ -430,7 +383,8 @@ class RobotPilot
                 double deltaAngle = m_angularSpeed * deltaTime;
                 m_position.x += r * (sin(deltaAngle + m_position.z) - sin(m_position.z));
                 m_position.y -= r * (cos(deltaAngle + m_position.z) - cos(m_position.z));
-                m_position.z += deltaAngle;
+                if (m_simulation)
+                    m_position.z += deltaAngle;
             }
             else
             {
@@ -438,61 +392,137 @@ class RobotPilot
                 m_position.y += m_linearSpeed * deltaTime * sin(m_position.z);
             }
 
-            m_linearSpeed = lin;
-            m_angularSpeed = ang;
-
-            geometry_msgs::Twist msg;     // The default constructor will set all commands to 0
-            msg.linear.x = lin;
-            msg.angular.z = -ang;
-            m_commandPub.publish(msg);
-
+            m_linearSpeed = order->linear.x;
+            m_angularSpeed = order->angular.z;
             m_time = ros::Time::now();
         }
+        
+        void localMapCallback(const nav_msgs::OccupancyGrid::ConstPtr& grid)
+        {
+            ros::Time t = ros::Time::now();
+            for (int y=0 ; y < grid->info.height ; y++)
+            {
+                int k = y * grid->info.width;
+                double fy = m_position.y + (y-(int)grid->info.height/2)*grid->info.resolution;
+                for (int x=0 ; x < grid->info.width ; x++)
+                {
+                    double p = grid->data[k+x] / 100.0;
+                    if (p >= 0)
+                    {
+                        double fx = m_position.x + (x-(int)grid->info.width/2)*grid->info.resolution;
+                        fx = fx * cos(-m_startOrientation) - fy * sin(-m_startOrientation);
+                        fy = fx * sin(-m_startOrientation) + fy * cos(-m_startOrientation);
+                        m_grid.addPoint(fx, fy, t, p);
+                    }
+                }
+            }
+        }
+        
+        //From https://github.com/ros-perception/pointcloud_to_laserscan/blob/indigo-devel/src/pointcloud_to_laserscan_nodelet.cpp
+        void pointCloudToLaserScan(const sensor_msgs::PointCloud2ConstPtr &cloud_msg, sensor_msgs::LaserScan& output)
+        {
+            output.angle_min = -30.0 * M_PI/180;
+            output.angle_max = 30.0 * M_PI/180;
+            output.angle_increment = ANGLE_PRECISION * M_PI / 180;
+            output.time_increment = 0.0;
+            output.scan_time = 1.0 / 30.0;
+            output.range_min = 0.45;
+            output.range_max = 15.0;
 
-        // Process the incoming laser scan message
-        void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
+            //determine amount of rays to create
+            uint32_t ranges_size = std::ceil((output.angle_max - output.angle_min) / output.angle_increment);
+            output.ranges.assign(ranges_size, std::numeric_limits<double>::infinity());
+
+            // Iterate through pointcloud
+            for (sensor_msgs::PointCloud2ConstIterator<float>
+                    iter_x(*cloud_msg, "x"), iter_y(*cloud_msg, "y"), iter_z(*cloud_msg, "z");
+                    iter_x != iter_x.end();
+                    ++iter_x, ++iter_y, ++iter_z)
+            {
+
+                if (std::isnan(*iter_x) || std::isnan(*iter_y) || std::isnan(*iter_z))
+                    continue;
+
+                if (*iter_y > 1.0 || *iter_y < -1.0)
+                    continue;
+                
+                double range = hypot(*iter_x, *iter_z);
+                if (range < output.range_min || range > output.range_max)
+                    continue;
+
+                //ROS_INFO("Range at (%.3f, %.3f): %.3f", *iter_x, *iter_y, range);
+                
+                double angle = -atan2(*iter_x, *iter_z);
+                if (angle < output.angle_min || angle > output.angle_max)
+                    continue;
+                
+                //ROS_INFO("Range at angle %.3f: %.3f", angle*180/M_PI, range);
+
+                //overwrite range at laserscan ray if new range is smaller
+                int index = (angle - output.angle_min) / output.angle_increment;
+                if (range < output.ranges[index])
+                {
+                    output.ranges[index] = range;
+                }
+            }
+        }
+
+        void processLaserScan(sensor_msgs::LaserScan& scan, bool invert)
         {
             int maxIdx = ceil(360 / ANGLE_PRECISION);
-            int nbRanges = ceil((scan->angle_max - scan->angle_min) / scan->angle_increment);
+            int nbRanges = ceil((scan.angle_max - scan.angle_min) / scan.angle_increment);
             int prevAngleIdx = -1;
             ros::Time t = ros::Time::now();
             
             for (int i=0 ; i < nbRanges ; i++)
             {
-                double angle = modAngle(-(scan->angle_min + i * scan->angle_increment));
+                if (scan.ranges[i] > MAX_RANGE || scan.ranges[i] >= scan.range_max)
+                    scan.ranges[i] = std::numeric_limits<float>::infinity();
+                double range = scan.ranges[i];
+                
+                double angle = modAngle(scan.angle_min + i * scan.angle_increment);
+                if (invert)
+                    angle = modAngle(angle + M_PI); //The laser scan points towards robot's back
+                
                 int angleIdx = round(angle * 180 / (M_PI * ANGLE_PRECISION));
                 if (angleIdx >= maxIdx)
                     angleIdx = 0;
                 if (angleIdx != prevAngleIdx)
                 {
                     prevAngleIdx = angleIdx;
-                    m_ranges[angleIdx] = scan->ranges[i];
+                    m_ranges[angleIdx] = range;
                 }
-                else if (m_ranges[angleIdx] > scan->ranges[i])
-                    m_ranges[angleIdx] = scan->ranges[i];
+                else if (m_ranges[angleIdx] > range)
+                    m_ranges[angleIdx] = range;
                 
-                double cosAngle = cos(angle + m_position.z);
-                double sinAngle = sin(angle + m_position.z);
-                double endX = scan->ranges[i] * cosAngle + m_position.x;
-                double endY = scan->ranges[i] * sinAngle + m_position.y;
-                m_grid.addPoint(endX, endY, t, true);
-                
-                double dstep = m_grid.precision();
-                double dmax = scan->ranges[i] - dstep;
-                for (double d=dstep ; d <= dmax ; d += dstep)
+                if (!std::isinf(range))
                 {
-                    double x = d * cosAngle + m_position.x;
-                    double y = d * sinAngle + m_position.y;
-                    m_grid.addPoint(x, y, t, false);
+                    double endX = range * cos(angle + m_position.z) + m_position.x;
+                    double endY = range * sin(angle + m_position.z) + m_position.y;
+                    int cloudPointIdx = (i+m_cloudPointsStartIdx) % NB_CLOUDPOINTS;
+                    m_cloudPoints[cloudPointIdx].x = endX;
+                    m_cloudPoints[cloudPointIdx].y = endY;
+                    //ROS_INFO("Added cloud point (%.3f, %.3f)", endX, endY);
                 }
-                
-                int cloudPointIdx = (i+m_cloudPointsStartIdx) % NB_CLOUDPOINTS;
-                m_cloudPoints[cloudPointIdx].x = endX;
-                m_cloudPoints[cloudPointIdx].y = endY;
             }
             m_cloudPointsStartIdx += nbRanges;
         }
 
+        // Process the incoming laser scan message
+        void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
+        {
+            sensor_msgs::LaserScan scanCopy = *scan;
+            processLaserScan(scanCopy, !m_simulation);
+            m_laserPub.publish(scanCopy);
+        }
+        
+        void depthCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
+        {
+            /*sensor_msgs::LaserScan scan;
+            pointCloudToLaserScan(cloud, scan);
+            processLaserScan(scan, false, m_depthGrid);*/
+        }
+        
         bool proximityAlert()
         {
             int idx = ceil(45 / ANGLE_PRECISION);
@@ -510,28 +540,98 @@ class RobotPilot
             return false;
         }
 
-        void updateDisplay(geometry_msgs::Vector3 tgtPoint)
+        bool initSDL()
         {
+            if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+            {
+                ROS_ERROR("Unable to initialize the SDL.");
+                return false;
+            }
+
+            m_screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, 32, SDL_SWSURFACE);
+            if (!m_screen)
+            {
+                ROS_ERROR("Unable to create display window.");
+                return false;
+            }
+            SDL_Flip(m_screen);
+
+            m_robotSurf = SDL_CreateRGBSurface(SDL_HWSURFACE, 20, 20, 32, 0,0,0,0);
+            if (!m_robotSurf)
+            {
+                ROS_ERROR("Unable to create the robot bitmap.");
+                return false;
+            }
+            
+            SDL_FillRect(m_robotSurf, NULL, SDL_MapRGB(m_robotSurf->format, 0,0,0));
+            return true;
+        }
+        
+        void updateDisplay()
+        {
+            //ROS_INFO("Updating display");
+            
             Vector pos = {m_position.x, m_position.y};
             Vector speed = {m_linearSpeed * cos(m_position.z), m_linearSpeed * sin(m_position.z)};
             Vector acceleration = {-m_linearSpeed * m_angularSpeed * sin(m_position.z), m_linearSpeed * m_angularSpeed * cos(m_position.z)};
-            Vector targetPoint = {tgtPoint.x, tgtPoint.y};
-            //ROS_INFO("Updating display");
-            m_display.update(pos, speed, acceleration, m_cloudPoints, NB_CLOUDPOINTS, targetPoint, m_grid);
-            //ROS_INFO("Display updated");
+            
+            SDL_FillRect(m_screen, 0, SDL_MapRGB(m_screen->format, 255,255,255));
+            
+            SDL_Rect rect = {0};
+            SDL_FillRect(m_gridSurf, NULL, SDL_MapRGB(m_gridSurf->format, 0,0,0));
+            m_grid.draw(SCREEN_WIDTH, SCREEN_HEIGHT, m_minX, m_maxX, m_minY, m_maxY, m_gridSurf);
+            SDL_BlitSurface(m_gridSurf, NULL, m_screen, &rect);
+            
+            double kx = SCREEN_WIDTH / (m_maxX - m_minX);
+            double ky = SCREEN_HEIGHT / (m_maxY - m_minY);
+            
+            Uint32 black = SDL_MapRGB(m_screen->format, 0,0,0);
+            for (int i=0 ; i < NB_CLOUDPOINTS ; i++)
+            {
+                if (!isnan(m_cloudPoints[i].x) && !isnan(m_cloudPoints[i].y))
+                    putPixel(m_screen, (m_cloudPoints[i].x-m_minX) * kx, SCREEN_HEIGHT - (m_cloudPoints[i].y-m_minY) * ky, black);
+            }
+
+            int x = (m_position.x-m_minX) * kx;
+            int y = SCREEN_HEIGHT - (m_position.y-m_minY) * ky;
+            rect.x = x-m_robotSurf->w/2;
+            rect.y = y-m_robotSurf->h/2;
+            SDL_BlitSurface(m_robotSurf, NULL, m_screen, &rect);
+            drawLine(m_screen, x, y, x + speed.x*kx, y - speed.y*ky, createColor(0,0,255));
+            drawLine(m_screen, x, y, x + acceleration.x*kx, y - acceleration.y*ky, createColor(255,0,0));
+            drawLine(m_screen, x, y, x+30*cos(m_position.z), y-30*sin(m_position.z), createColor(0,0,0));
+            
+            SDL_Flip(m_screen);
+            
+            //ROS_INFO("Display updated.");
         }
 
     public:
-        static const double MIN_PROXIMITY_RANGE;
-        static const double MAX_LINEARSPEED;
-        static const double MAX_ANGULARSPEED;
-
-        RobotPilot(ros::NodeHandle& node, bool simulation): m_node(node), m_simulation(simulation),
-            m_angularSpeed(0), m_linearSpeed(0), m_cloudPointsStartIdx(0), m_display(512, 512, 10.0, 10.0), m_grid(0.1)
+        RobotPilot(ros::NodeHandle& node, bool simulation=true, double minX=-5, double maxX=5, double minY=-5, double maxY=5):
+            m_node(node), m_simulation(simulation), m_cloudPointsStartIdx(0),
+            m_angularSpeed(0), m_linearSpeed(0),
+            m_minX(minX), m_maxX(maxX), m_minY(minY), m_maxY(maxY)
         {
-            m_position.x = 2.0;
-            m_position.y = 2.0;
-            m_position.z = M_PI / 2;
+            initSDL();
+            
+            m_gridSurf = SDL_CreateRGBSurface(SDL_HWSURFACE, SCREEN_WIDTH, SCREEN_HEIGHT, 32,0,0,0,0);
+            SDL_SetColorKey(m_gridSurf, SDL_SRCCOLORKEY, SDL_MapRGB(m_gridSurf->format, 0,0,0));
+            
+            if (m_simulation)
+            {
+                m_position.x = 2.0;
+                m_position.y = 2.0;
+                m_position.z = 0.0;
+            }
+            else
+            {
+                m_position.x = 0.0;
+                m_position.y = 0.0;
+                m_position.z = M_PI/2;
+            }
+            
+            m_startOrientation = m_position.z;
+            m_grid = Grid(0.05, ros::Duration(120.0), m_minX, m_maxX, m_minY, m_maxY, false);
             
             int nbRanges = ceil(360 / ANGLE_PRECISION);
             m_ranges = new double[nbRanges];
@@ -548,21 +648,47 @@ class RobotPilot
             }
 
             // Subscribe to the robot's laser scan topic
-            m_laserSub = m_node.subscribe("/scan", 1, &RobotPilot::scanCallback, this);
+            m_laserSub = m_node.subscribe<sensor_msgs::LaserScan>("/scan", 1, &RobotPilot::scanCallback, this);
             ROS_INFO("Waiting for laser scan...");
             ros::Rate rate(10);
             while (ros::ok() && m_laserSub.getNumPublishers() <= 0)
                 rate.sleep();
             checkRosOk_v();
             
-            // Advertise a new publisher for the robot's velocity command topic
-            m_commandPub = m_node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 10);
-            ROS_INFO("Waiting for a robot to control...");
-            while (ros::ok() && m_commandPub.getNumSubscribers() <= 0)
+            // Subscribe to the robot's depth cloud topic
+            m_depthSub = m_node.subscribe<sensor_msgs::PointCloud2>("/camera/depth/points", 1, &RobotPilot::depthCallback, this);
+            if (!m_simulation)
+            {
+                ROS_INFO("Waiting for depth cloud...");
+                while (ros::ok() && m_depthSub.getNumPublishers() <= 0)
+                    rate.sleep();
+                checkRosOk_v();
+            }
+            
+            m_orderSub = m_node.subscribe<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1000, &RobotPilot::moveOrderCallback, this);
+            ROS_INFO("Waiting for orders...");
+            while (ros::ok() && m_orderSub.getNumPublishers() <= 0)
                 rate.sleep();
             checkRosOk_v();
-
+            
+            m_imuSub = m_node.subscribe<sensor_msgs::Imu>("/mobile_base/sensors/imu_data", 1000, &RobotPilot::IMUCallback, this);
+            if (!m_simulation)
+            {
+                ROS_INFO("Waiting for IMU...");
+                while (ros::ok() && m_imuSub.getNumPublishers() <= 0)
+                    rate.sleep();
+                checkRosOk_v();
+            }
+            
+            m_laserPub = m_node.advertise<sensor_msgs::LaserScan>("/local_map/scan", 10);
+            m_localMapSub = m_node.subscribe<nav_msgs::OccupancyGrid>("/local_map/local_map", 10, &RobotPilot::localMapCallback, this);
+            ROS_INFO("Waiting for local_map...");
+            while (ros::ok() && (m_localMapSub.getNumPublishers() <= 0 || m_laserPub.getNumSubscribers() <= 0))
+                rate.sleep();
+            checkRosOk_v();
+            
             m_time = ros::Time::now();
+            ROS_INFO("Ok, let's go.");
         }
 
         ~RobotPilot()
@@ -571,101 +697,53 @@ class RobotPilot
                 delete m_ranges;
             if (m_cloudPoints != NULL)
                 delete m_cloudPoints;
+            if (m_gridSurf != NULL)
+                SDL_FreeSurface(m_gridSurf);
         }
 
-        void startMoving()
+        void reckon()
         {
-            ROS_INFO("Starting movement.");
-            
-            double deltaTime = 5.0;
-            double loopRate = 20.0;
-            ros::Rate rate(loopRate);
-            int mainModulo = round(loopRate * deltaTime);
-            bool isStuck = false;
-            
-            ros::Time targetETA;
-            geometry_msgs::Vector3 targetPoint;
-            
-            for (int i=0 ; ros::ok() ; i++)
+            ROS_INFO("Starting reckoning.");
+            ros::Rate rate(10);
+            while (ros::ok())
             {
-                ros::spinOnce(); // Need to call this function often to allow ROS to process incoming messages
-                
-                if (i % mainModulo == 0)
-                {
-                    targetETA = ros::Time::now() + ros::Duration(deltaTime);
-                    targetPoint.x = 10 * (rand() / (double)RAND_MAX);
-                    targetPoint.y = 10 * (rand() / (double)RAND_MAX);
-                }
-
-                if (!goTo(targetPoint, (targetETA - ros::Time::now()).toSec()))
-                {
-                    if (!isStuck)
-                    {
-                        i = -1;
-                        isStuck = true;
-                    }
-                }
-                else
-                    isStuck = false;
-                
-                updateDisplay(targetPoint);
+                ros::spinOnce();
+                updateDisplay();
                 rate.sleep();
             }
         }
-
-        bool goTo(const geometry_msgs::Vector3& targetPoint, double remainingTime)
-        {
-            static unsigned int lastProxAlert = 0;
-            if (remainingTime <= 0)
-                return false;
-
-            double a = modAngle(atan2(targetPoint.y-m_position.y, targetPoint.x-m_position.x) - m_position.z);
-            if (a > M_PI)
-                a -= 2*M_PI;
-            double r = sqrt(pow(targetPoint.x-m_position.x, 2) + pow(targetPoint.y-m_position.y, 2));
-            
-            double angularSpeed = max(min(4.0 * a / remainingTime, MAX_ANGULARSPEED), -MAX_ANGULARSPEED);
-            double linearSpeed = max(min(0.5 * r / remainingTime, MAX_LINEARSPEED), -MAX_LINEARSPEED);
-            
-            bool ok=true;
-            if (proximityAlert())
-            {
-                if (ros::Time::now().toSec() - lastProxAlert >= 1.0)
-                {
-                    lastProxAlert = ros::Time::now().toSec();
-                    ROS_INFO("Proximity alert!");
-                }
-                linearSpeed = 0;
-                ok = false;
-            }
-
-            sendMoveOrder(linearSpeed, angularSpeed);
-            return ok;
-        }
 };
 
-const double RobotPilot::ANGLE_PRECISION = 1.0; //deg
+const double RobotPilot::ANGLE_PRECISION = 0.1; //deg
 const int RobotPilot::NB_CLOUDPOINTS = 1000;
 const double RobotPilot::MIN_PROXIMITY_RANGE = 0.5; // Should be smaller than sensor_msgs::LaserScan::range_max
 const double RobotPilot::MAX_LINEARSPEED = 0.5;
 const double RobotPilot::MAX_ANGULARSPEED = M_PI/4;
+const double RobotPilot::MAX_RANGE = 15.0;
 
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "deadreckoning");
-    ros::NodeHandle node;
+    ros::NodeHandle node("~");
     ROS_INFO("Initialized ROS.");
 
     bool simulation = true;
-    if (argc > 1 && strcmp(argv[1], "realworld"))
-        simulation = false;
+    std::string mode;
+    if (node.getParam("mode", mode))
+        simulation = mode != "realworld";
     ROS_INFO("Mode: %s", simulation ? "Simulation" : "Real world");
 
     srand(time(0));
     
-    RobotPilot pilot(node, simulation);
-    pilot.startMoving();
+    double minX=-5, maxX=5, minY=-5, maxY=5;
+    if (simulation)
+    {
+        minX = 0; maxX = 10;
+        minY = 0; maxY = 10;
+    }
+    RobotPilot pilot(node, simulation, minX, maxX, minY, maxY);
+    pilot.reckon();
     
     ROS_INFO("Bye!");
     return 0;
