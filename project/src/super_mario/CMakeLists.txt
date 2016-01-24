@@ -4,10 +4,12 @@ project(super_mario)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED 
+find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
-  cv_bridge)
+  cv_bridge
+sensor_msgs
+)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -124,7 +126,11 @@ catkin_package(
 # add_dependencies(super_mario ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
- add_executable(super_mario src/super_mario.cpp)
+ add_executable(super_mario
+    src/main.cpp
+    src/super_mario.cpp
+
+)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
