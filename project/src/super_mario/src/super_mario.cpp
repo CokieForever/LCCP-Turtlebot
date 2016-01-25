@@ -7,11 +7,20 @@ using namespace cv;
 
 SuperMario::SuperMario(ros::NodeHandle &nh, Mat &tmpl) : m_nh(nh), m_templ(tmpl)
 {
-
+  m_checkcoin = false;
   m_imageSub = m_nh.subscribe("/camera/rgb/image_rect_color",1, &SuperMario::imageCallback, this);
+  //subscribe to topic from movement
+  m_movementSub = m_nh.subscribe("/super_mario/check_object", 1, &SuperMario::movementCallback, this);
+
   ROS_INFO("Subscribed");
 
 }
+void SuperMario::movementCallback(std_msgs::Bool move_bool)
+{
+    // ********************   2     *******************
+    m_checkcoin =  (move_bool.data) ? false : true;
+}
+
 void SuperMario::imageCallback(const sensor_msgs::ImageConstPtr& img_msg)
 {
    ROS_INFO("Image Callback");
@@ -44,12 +53,21 @@ void SuperMario::imageCallback(const sensor_msgs::ImageConstPtr& img_msg)
  ROS_INFO("Matching method");
  // m_match_method = 4;
  // SuperMario::MatchingMethod( 0, 0 );
+
+ // ********************   3     *******************
+ if (m_checkcoin)
+ {
+    //check if there's a coin in the received image
+     m_img = mat_img; //assign to member variable, so matching method can use it.
+     SuperMario::MatchingMethod(0,0);
+
+ }
  ROS_INFO("After matching");
   waitKey(0);
 
   imshow("Detection", mat_img);
 
-  //save img
+  //save img - TEMPORARY TO TAKE SCREENSHOT OF TEMPLATE
   vector<int> compression_params; //vector that stores the compression parameters of the image
 
   compression_params.push_back(CV_IMWRITE_JPEG_QUALITY); //specify the compression technique
@@ -64,7 +82,7 @@ void SuperMario::imageCallback(const sensor_msgs::ImageConstPtr& img_msg)
   }
 }
 
-
+// ********************   4     *******************
 void SuperMario::MatchingMethod( int, void* )
 {
   //// Source image to display

@@ -4,6 +4,7 @@
 #include "kobuki_msgs/BumperEvent.h"
 #include "tf/transform_listener.h"
 #include "sensor_msgs/Image.h"
+#include "std_msgs/Bool.h"
 class Mover
 {
 public://Tunable parameters
@@ -27,6 +28,7 @@ private:
 	 * targetReachedRequest
 	 * */
 
+    ros::Publisher marioPub;
 	ros::Publisher commandPub;	//	Publisher to the robot's velocity command topic
 	ros::Publisher targetReachedRequest; // Publishes a "true" state
 
