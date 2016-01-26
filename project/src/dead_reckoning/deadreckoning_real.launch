@@ -1,0 +1,15 @@
+<launch>   
+    <node name="local_map_scan" pkg="local_map" type="local_map" output="screen">
+        <param name="map_resolution" type="double" value="0.05" />
+        <param name="map_width" type="double" value="600" />
+        <param name="map_height" type="double" value="600" />
+    </node>
+    <node name="local_map_depth" pkg="local_map" type="local_map" output="screen">
+        <param name="map_resolution" type="double" value="0.05" />
+        <param name="map_width" type="double" value="600" />
+        <param name="map_height" type="double" value="600" />
+    </node>
+    <node name="deadreckoning" pkg="dead_reckoning" type="deadreckoning" output="screen">
+        <param name="mode" type="string" value="realworld" />
+    </node>
+</launch>
