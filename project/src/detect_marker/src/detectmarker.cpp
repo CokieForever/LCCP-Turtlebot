@@ -46,7 +46,7 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     
     deblurred_img=deblurring(img).clone(); //////////////////////
     if(deblurred_img.empty())
-    {	ROS_WARN ("Could not create the black and white image") ;
+    {    ROS_WARN ("Could not create the black and white image") ;
     }
     detector.detect(deblurred_img, markers);
     int nbMarkers = markers.size();
@@ -59,10 +59,10 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     {
 
           int width = deblurred_img.cols;
-    	    int height = deblurred_img.rows;
-    	    int channels = deblurred_img.channels();
-    	    ROS_INFO("deblurred Image size: %dx%dx%d", width, height, channels);
-    	    if (deblurred_img.cols <= 0 || deblurred_img.rows <= 0)
+            int height = deblurred_img.rows;
+            int channels = deblurred_img.channels();
+            ROS_INFO("deblurred Image size: %dx%dx%d", width, height, channels);
+            if (deblurred_img.cols <= 0 || deblurred_img.rows <= 0)
         {
             ROS_WARN("Received emtpy / unconventional image.");
             return;
@@ -78,14 +78,14 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
           k=0;
           for  ( int x =  0 ; x <deblurred_img.cols-smallSize.width+2 ; x +=width/2 )
           {
-	    ROS_INFO("no markers detected.Zoom in is the next step");
+        ROS_INFO("no markers detected.Zoom in is the next step");
             zoomed_pic= true;
             cv::Rect rect = cv::Rect(x, y, smallSize.width, smallSize.height);
             cout << x << " " << y << " " << smallSize.width << " " << smallSize.height << endl;
             ROS_INFO("Image size: %dx%dx%dx%d", x, y, smallSize.width, smallSize.height);
             smallImages.push_back(cv::Mat(deblurred_img, rect));
             resize(cv::Mat(deblurred_img, rect), dst, deblurred_img.size(), 0, 0, CV_INTER_LINEAR);
-	    cv::imshow("ZOOOOOOOOm", dst);
+        cv::imshow("ZOOOOOOOOm", dst);
             detector.detect(dst,markers);
             cv::Mat frame = dst;
             drawingMarkers(frame, markers, k, l, zoomed_pic);
@@ -113,7 +113,7 @@ void DetectMarker::drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &mar
     int height = frame.rows;
     int channels = frame.channels();
         int coord_division;
-    	ROS_INFO("Image size2: %dx%dx%d", width, height, channels);
+        ROS_INFO("Image size2: %dx%dx%d", width, height, channels);
     if (frame.cols <= 0 || frame.rows <= 0)
     {
         ROS_WARN("Received emtpy / unconventional image.");
@@ -138,30 +138,29 @@ void DetectMarker::drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &mar
             ROS_WARN("Unable to compute center.");
         else
         {
-            double markerHeight = (std::max(corners[2].y, corners[3].y) - std::min(corners[0].y, corners[1].y)) / (double)height;
             detect_marker::MarkerInfo markerInfo;
             if (zoomed_pic)
             {
-	      ROS_INFO(" Zoom");
-              coord_division=2;
-              cv::imshow("Marker Detection Zoomed", frame);
- 
+                ROS_INFO(" Zoom");
+                coord_division=2;
+                cv::imshow("Marker Detection Zoomed", frame);
             }
             else
             {
-              coord_division=1;
-	      ROS_INFO("No Zoom");
-              cv::imshow("Marker Detection Unzoomed", frame);
-   
+                coord_division=1;
+                ROS_INFO("No Zoom");
+                cv::imshow("Marker Detection Unzoomed", frame);
             }
-              
-              double xtrial=2*(center.x /(double)width)-1;
-              double ytrial=2*(center.y/(double)height)-1;
-	      markerInfo.x = 2*((center.x+k*width) /(coord_division*(double)width))-1; //tranformation of the center coordinates of zoomed pic to coordinates of initial pic
-              markerInfo.y = 2*((center.y+l*height) /(coord_division*(double)height))-1;
-              markerInfo.id = marker.id;
-              markersInfos.infos.push_back(markerInfo);
-            
+
+            double markerHeight = (std::max(corners[2].y, corners[3].y) - std::min(corners[0].y, corners[1].y)) / (double)(coord_division*height);
+            double xtrial= 2*(center.x /(double)width)-1;
+            double ytrial= 2*(center.y/(double)height)-1;
+            markerInfo.x = 2*((center.x+k*width) /(coord_division*(double)width))-1; //tranformation of the center coordinates of zoomed pic to coordinates of initial pic
+            markerInfo.y = 2*((center.y+l*height) /(coord_division*(double)height))-1;
+            markerInfo.d = MARKER_REF_DIST / markerHeight;
+            markerInfo.id = marker.id;
+            markersInfos.infos.push_back(markerInfo);
+
             ROS_INFO("Marker %d: pos = (%.3f, %.3f); d = %.3f", markerInfo.id, markerInfo.x, markerInfo.y, markerInfo.d);
             ROS_INFO("Zoomed Marker %d: (%.3f, %.3f)", markerInfo.id, xtrial, ytrial);
         }
