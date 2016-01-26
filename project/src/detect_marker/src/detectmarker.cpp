@@ -1,5 +1,3 @@
-#include "aruco/aruco.h"
-#include "cv_bridge/cv_bridge.h"
 #include <sensor_msgs/image_encodings.h>
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -13,7 +11,7 @@ DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     ROS_INFO("Subscribing to camera image topic...");
     m_cameraSub = m_nodeHandle.subscribe("/camera/rgb/image_raw", 1, &DetectMarker::cameraSubCallback, this);
     ros::Rate loopRate(10);
-	while (ros::ok() && m_cameraSub.getNumPublishers() <= 0)
+    while (ros::ok() && m_cameraSub.getNumPublishers() <= 0)
         loopRate.sleep();
 
     ROS_INFO("Creating markers topic...");
@@ -43,7 +41,6 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
         exit(-1);
     }
     
-
     aruco::MarkerDetector detector;
     std::vector<aruco::Marker> markers;
     
@@ -55,10 +52,9 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     int nbMarkers = markers.size();
     ROS_INFO("Amount of markers: %d", nbMarkers);
     bool zoomed_pic=false;
-
+    
     int k=0;
     int l=0;
-
     if (nbMarkers==0)
     {
 
@@ -67,12 +63,11 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     	    int channels = deblurred_img.channels();
     	    ROS_INFO("deblurred Image size: %dx%dx%d", width, height, channels);
     	    if (deblurred_img.cols <= 0 || deblurred_img.rows <= 0)
-    		{
-        	ROS_WARN("Received emtpy / unconventional image.");
-        	return;
-    		}
+        {
+            ROS_WARN("Received emtpy / unconventional image.");
+            return;
+        }
     
-
         cv::Size smallSize(width /2 ,height /2);
         cv::Mat dst;
         cv::Mat smallImages;
@@ -95,42 +90,39 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
             cv::Mat frame = dst;
             drawingMarkers(frame, markers, k, l, zoomed_pic);
             k++;
-
           }
           l++;
       }
    }
    else
-   {
+    {
       k=0;
       l=0;
       cv::Mat frame=deblurred_img;
       zoomed_pic=false;
       drawingMarkers(frame, markers, k, l, zoomed_pic );
-   }
-
-
+    }
 
 }
 
 void DetectMarker::drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &markers, int k, int l, bool zoomed_pic)
 {
-	cv::Scalar colorScalar(255,155,0, 0);
-	detect_marker::MarkersInfos markersInfos;
-	int width = frame.cols;
-    	int height = frame.rows;
-    	int channels = frame.channels();
+    cv::Scalar colorScalar(255,155,0, 0);
+    detect_marker::MarkersInfos markersInfos;
+    int width = frame.cols;
+    int height = frame.rows;
+    int channels = frame.channels();
         int coord_division;
     	ROS_INFO("Image size2: %dx%dx%d", width, height, channels);
-    	if (frame.cols <= 0 || frame.rows <= 0)
-    	{
-        	ROS_WARN("Received emtpy / unconventional image.");
-        	return;
-    	}
+    if (frame.cols <= 0 || frame.rows <= 0)
+    {
+        ROS_WARN("Received emtpy / unconventional image.");
+        return;
+    }
     
-	int nbMarkers=markers.size();
-	for (int i=0 ; i < nbMarkers ; i++)
-    	{
+    int nbMarkers=markers.size();
+    for (int i=0 ; i < nbMarkers ; i++)
+    {
         aruco::Marker& marker = markers[i];
         marker.draw(frame, colorScalar);
 
@@ -142,10 +134,11 @@ void DetectMarker::drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &mar
             corners[j].y = marker[j].y;
         }
         
-        if (!ComputerQuadrilateralCenter(corners, &center))
+        if (!ComputeQuadrilateralCenter(corners, &center))
             ROS_WARN("Unable to compute center.");
         else
         {
+            double markerHeight = (std::max(corners[2].y, corners[3].y) - std::min(corners[0].y, corners[1].y)) / (double)height;
             detect_marker::MarkerInfo markerInfo;
             if (zoomed_pic)
             {
@@ -168,8 +161,8 @@ void DetectMarker::drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &mar
               markerInfo.y = 2*((center.y+l*height) /(coord_division*(double)height))-1;
               markerInfo.id = marker.id;
               markersInfos.infos.push_back(markerInfo);
-
-            ROS_INFO("Marker %d: (%.3f, %.3f)", markerInfo.id, markerInfo.x, markerInfo.y);
+            
+            ROS_INFO("Marker %d: pos = (%.3f, %.3f); d = %.3f", markerInfo.id, markerInfo.x, markerInfo.y, markerInfo.d);
             ROS_INFO("Zoomed Marker %d: (%.3f, %.3f)", markerInfo.id, xtrial, ytrial);
         }
     }
@@ -180,8 +173,6 @@ void DetectMarker::drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &mar
 
 
 }
-
-
 
 bool DetectMarker::ComputeLinesIntersection(Point linePoints1[2], Point linePoints2[2], Point *isectPoint)
 {
@@ -204,11 +195,45 @@ bool DetectMarker::ComputeLinesIntersection(Point linePoints1[2], Point linePoin
     return true;
 }
 
-bool DetectMarker::ComputerQuadrilateralCenter(Point points[4], Point *centerPoint)
+bool DetectMarker::ComputeQuadrilateralCenter(Point points[4], Point *centerPoint)
 {
     Point linePoints1[2] = {points[0], points[2]};
     Point linePoints2[2] = {points[1], points[3]};
     return ComputeLinesIntersection(linePoints1, linePoints2, centerPoint);
+}
+
+void DetectMarker::Filtering(const cv::Mat& img, cv::Mat** output)
+{
+    cv::Mat *field = NULL;
+    Deinterlace(img, &field);
+
+    //TODO
+
+    *output = field;
+}
+
+void DetectMarker::Deinterlace(const cv::Mat& frame, cv::Mat** field1, cv::Mat** field2)
+{
+    int height = frame.rows;
+
+    cv::Mat f1((height+1)/2, frame.cols, frame.type());
+    cv::Mat f2((height+1)/2, frame.cols, frame.type());
+
+    for (int y=0 ; y < height ; y+=2)
+    {
+        f1.row(y/2) = frame.row(y);
+        if (field2 != NULL)
+            f2.row(y/2) = frame.row(y+1);
+    }
+
+    *field1 = new cv::Mat(cv::Mat(frame.size(), frame.type()));
+    cv::resize(f1, **field1, frame.size());
+
+    if (field2 != NULL)
+    {
+        *field2 = new cv::Mat(cv::Mat(frame.size(), frame.type()));
+        cv::resize(f2, **field2, frame.size());
+    }
 }
 
 void DetectMarker::Detect()
@@ -272,8 +297,6 @@ cv::Mat DetectMarker::deblurring(cv::Mat img )
 
 
 }
-
-
 
 
 

@@ -1,20 +1,21 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(task1)
+project(local_map)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
- aruco
+find_package(catkin REQUIRED
+  COMPONENTS
+  angles
+  geometry_msgs
+  lama_msgs
+  map_ray_caster
+  message_generation
+  nav_msgs
   roscpp
-  std_msgs
-  cv_bridge
   sensor_msgs
-image_transport
-message_generation
-  rosconsole
-  rostime
-)
+  tf
+  )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -34,10 +35,10 @@ message_generation
 ## * Let MSG_DEP_SET be the set of packages whose message types you use in
 ##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
 ## * In the file package.xml:
-##   * add a build_depend tag for "message_generation"
 ##   * add a build_depend and a run_depend tag for each package in MSG_DEP_SET
-##   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
-##     but can be declared for certainty nonetheless:
+##   * If MSG_DEP_SET isn't empty the following dependencies might have been
+##     pulled in transitively but can be declared for certainty nonetheless:
+##     * add a build_depend tag for "message_generation"
 ##     * add a run_depend tag for "message_runtime"
 ## * In this file (CMakeLists.txt):
 ##   * add "message_generation" and every package in MSG_DEP_SET to
@@ -57,11 +58,10 @@ message_generation
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  SaveMap.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -71,30 +71,10 @@ message_generation
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
+generate_messages(
 #   DEPENDENCIES
 #   std_msgs  # Or other packages containing msgs
-# )
-
-################################################
-## Declare ROS dynamic reconfigure parameters ##
-################################################
-
-## To declare and build dynamic reconfigure parameters within this
-## package, follow these steps:
-## * In the file package.xml:
-##   * add a build_depend and a run_depend tag for "dynamic_reconfigure"
-## * In this file (CMakeLists.txt):
-##   * add "dynamic_reconfigure" to
-##     find_package(catkin REQUIRED COMPONENTS ...)
-##   * uncomment the "generate_dynamic_reconfigure_options" section below
-##     and list every .cfg file to be processed
-
-## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -106,10 +86,23 @@ message_generation
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES task1
-#  CATKIN_DEPENDS roscpp
-#  DEPENDS system_lib
+  INCLUDE_DIRS
+  include
+
+  # LIBRARIES local_map 
+
+  CATKIN_DEPENDS
+  angles
+  geometry_msgs
+  lama_msgs
+  map_ray_caster
+  message_runtime
+  nav_msgs
+  roscpp
+  sensor_msgs
+  tf
+
+  #  DEPENDS system_lib
 )
 
 ###########
@@ -118,37 +111,24 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
 include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
-)
+  )
 
-## Declare a C++ library
-# add_library(task1
-#   src/${PROJECT_NAME}/task1.cpp
-# )
+## Declare a cpp library
+# add_library(map_ray_caster src/map_ray_caster.cpp)
 
-## Add cmake target dependencies of the library
-## as an example, code may need to be generated before libraries
-## either from message generation or dynamic reconfigure
-# add_dependencies(task1 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+## Declare a cpp executable
+set(SRC ${SRC} src/map_builder.cpp)
+add_executable(local_map src/local_map_node.cpp ${SRC})
 
-## Declare a C++ executable
-add_executable(detect_marker_node ../detect_marker/src/detect.cpp ../detect_marker/src/detectmarker.cpp)
-
-add_executable(stopper_node ../stopper_package/src/stopper.cpp ../stopper_package/src/run_stopper.cpp)
-
-## Add cmake target dependencies of the executable
-## same as for the library above
-# add_dependencies(task1_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+## Add cmake target dependencies of the executable/library
+## as an example, message headers may need to be generated before nodes
+add_dependencies(local_map local_map_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
- target_link_libraries(detect_marker_node
-   ${catkin_LIBRARIES}
- )
- target_link_libraries(stopper_node
-   ${catkin_LIBRARIES}
- )
+target_link_libraries(local_map ${catkin_LIBRARIES})
 
 #############
 ## Install ##
@@ -165,11 +145,11 @@ add_executable(stopper_node ../stopper_package/src/stopper.cpp ../stopper_packag
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS task1 task1_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+install(TARGETS local_map
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark cpp header files for installation
 # install(DIRECTORY include/${PROJECT_NAME}/
@@ -190,9 +170,9 @@ add_executable(stopper_node ../stopper_package/src/stopper.cpp ../stopper_packag
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_task1.cpp)
+catkin_add_gtest(${PROJECT_NAME}-test test/utest.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
+# target_link_libraries(${PROJECT_NAME}-test ${catkin_LIBRARIES} map_builder)
 # endif()
 
 ## Add folders to be run by python nosetests
