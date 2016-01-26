@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   rosconsole
   roscpp
   rostime
+  tf
 )
 
 ## System dependencies are found with CMake's conventions

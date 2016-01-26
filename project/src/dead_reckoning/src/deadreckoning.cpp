@@ -7,6 +7,7 @@
 #include <sensor_msgs/point_cloud2_iterator.h>
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/OccupancyGrid.h>
+#include <tf/transform_broadcaster.h>
 
 #include "../../utilities.h"
 
@@ -399,19 +400,20 @@ class RobotPilot
         
         void localMapCallback(const nav_msgs::OccupancyGrid::ConstPtr& grid)
         {
+            //ROS_INFO("Received local map");
+
             ros::Time t = ros::Time::now();
             for (int y=0 ; y < grid->info.height ; y++)
             {
                 int k = y * grid->info.width;
-                double fy = m_position.y + (y-(int)grid->info.height/2)*grid->info.resolution;
+                double fy = /*(m_simulation ? 1 : -1) * */(m_position.y + (y-(int)grid->info.height/2)*grid->info.resolution);
                 for (int x=0 ; x < grid->info.width ; x++)
                 {
                     double p = grid->data[k+x] / 100.0;
                     if (p >= 0)
                     {
-                        double fx = m_position.x + (x-(int)grid->info.width/2)*grid->info.resolution;
-                        fx = fx * cos(-m_startOrientation) - fy * sin(-m_startOrientation);
-                        fy = fx * sin(-m_startOrientation) + fy * cos(-m_startOrientation);
+                        //ROS_INFO("Point at (%d, %d): %.3f", x, y, p);
+                        double fx = /*(m_simulation ? 1 : -1) * */(m_position.x + (x-(int)grid->info.width/2)*grid->info.resolution);
                         m_grid.addPoint(fx, fy, t, p);
                     }
                 }
@@ -513,14 +515,29 @@ class RobotPilot
         {
             sensor_msgs::LaserScan scanCopy = *scan;
             processLaserScan(scanCopy, !m_simulation);
-            m_laserPub.publish(scanCopy);
+            //publishLaserScan(scanCopy, !m_simulation);
         }
         
         void depthCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
         {
-            /*sensor_msgs::LaserScan scan;
+            sensor_msgs::LaserScan scan;
             pointCloudToLaserScan(cloud, scan);
-            processLaserScan(scan, false, m_depthGrid);*/
+            //processLaserScan(scan, false);
+            publishLaserScan(scan, false);
+        }
+
+        void publishLaserScan(sensor_msgs::LaserScan& scan, bool invert)
+        {
+            static tf::TransformBroadcaster br;
+            tf::Transform transform;
+            transform.setOrigin( tf::Vector3(m_position.x, m_position.y, 0.0) );
+            tf::Quaternion q;
+            q.setRPY(0, 0, invert ? modAngle(m_position.z+M_PI) : m_position.z);
+            transform.setRotation(q);
+            br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "dr_pos"));
+            
+            scan.header.frame_id = "dr_pos";
+            m_laserPub.publish(scan);
         }
         
         bool proximityAlert()
