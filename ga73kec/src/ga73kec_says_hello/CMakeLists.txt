@@ -1,16 +1,14 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(movement)
+project(ga73kec_says_hello)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED roscpp tf
-  std_msgs
-  cv_bridge
-  sensor_msgs
-  image_transport
-  message_generation
-  )
+find_package(catkin REQUIRED COMPONENTS
+  rosconsole
+  roscpp
+  rostime
+)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -30,10 +28,10 @@ find_package(catkin REQUIRED roscpp tf
 ## * Let MSG_DEP_SET be the set of packages whose message types you use in
 ##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
 ## * In the file package.xml:
-##   * add a build_depend tag for "message_generation"
 ##   * add a build_depend and a run_depend tag for each package in MSG_DEP_SET
-##   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
-##     but can be declared for certainty nonetheless:
+##   * If MSG_DEP_SET isn't empty the following dependencies might have been
+##     pulled in transitively but can be declared for certainty nonetheless:
+##     * add a build_depend tag for "message_generation"
 ##     * add a run_depend tag for "message_runtime"
 ## * In this file (CMakeLists.txt):
 ##   * add "message_generation" and every package in MSG_DEP_SET to
@@ -72,26 +70,6 @@ find_package(catkin REQUIRED roscpp tf
 #   std_msgs  # Or other packages containing msgs
 # )
 
-################################################
-## Declare ROS dynamic reconfigure parameters ##
-################################################
-
-## To declare and build dynamic reconfigure parameters within this
-## package, follow these steps:
-## * In the file package.xml:
-##   * add a build_depend and a run_depend tag for "dynamic_reconfigure"
-## * In this file (CMakeLists.txt):
-##   * add "dynamic_reconfigure" to
-##     find_package(catkin REQUIRED COMPONENTS ...)
-##   * uncomment the "generate_dynamic_reconfigure_options" section below
-##     and list every .cfg file to be processed
-
-## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
-
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -103,8 +81,8 @@ find_package(catkin REQUIRED roscpp tf
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES movement
-#  CATKIN_DEPENDS other_catkin_pkg
+#  LIBRARIES ga73kec_says_hello
+#  CATKIN_DEPENDS rosconsole roscpp rostime
 #  DEPENDS system_lib
 )
 
@@ -115,27 +93,28 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+)
 
-## Declare a C++ library
-# add_library(movement
-#   src/${PROJECT_NAME}/movement.cpp
+## Declare a cpp library
+# add_library(ga73kec_says_hello
+#   src/${PROJECT_NAME}/ga73kec_says_hello.cpp
 # )
 
-## Add cmake target dependencies of the library
-## as an example, code may need to be generated before libraries
-## either from message generation or dynamic reconfigure
-# add_dependencies(movement ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+## Declare a cpp executable
+# add_executable(ga73kec_says_hello_node src/ga73kec_says_hello_node.cpp)
+add_executable(hello_world_node src/hello_world_node.cpp)
 
-## Declare a C++ executable
-add_executable(mover src/movement.cpp src/run_mover)
-
-## Add cmake target dependencies of the executable
-## same as for the library above
-# add_dependencies(movement_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+## Add cmake target dependencies of the executable/library
+## as an example, message headers may need to be generated before nodes
+# add_dependencies(ga73kec_says_hello_node ga73kec_says_hello_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
-
+# target_link_libraries(ga73kec_says_hello_node
+#   ${catkin_LIBRARIES}
+# )
+target_link_libraries(hello_world_node ${roscpp_LIBRARIES})
 #############
 ## Install ##
 #############
@@ -151,7 +130,7 @@ target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS movement movement_node
+# install(TARGETS ga73kec_says_hello ga73kec_says_hello_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -176,7 +155,7 @@ target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_movement.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_ga73kec_says_hello.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

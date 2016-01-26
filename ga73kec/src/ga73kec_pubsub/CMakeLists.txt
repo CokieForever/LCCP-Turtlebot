@@ -1,16 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(movement)
+project(ga73kec_pubsub)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED roscpp tf
-  std_msgs
-  cv_bridge
-  sensor_msgs
-  image_transport
-  message_generation
-  )
+find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs genmsg)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -51,14 +45,14 @@ find_package(catkin REQUIRED roscpp tf
 #   Message1.msg
 #   Message2.msg
 # )
-
+#add_message_files(DIRECTORY msg FILES Num.msg)
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
 #   Service1.srv
 #   Service2.srv
 # )
-
+#add_service_files(DIRECTORY srv FILES AddTwoInts.srv)
 ## Generate actions in the 'action' folder
 # add_action_files(
 #   FILES
@@ -71,7 +65,7 @@ find_package(catkin REQUIRED roscpp tf
 #   DEPENDENCIES
 #   std_msgs  # Or other packages containing msgs
 # )
-
+#generate_messages(DEPENDENCIES std_msgs)
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
 ################################################
@@ -103,7 +97,7 @@ find_package(catkin REQUIRED roscpp tf
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES movement
+#  LIBRARIES ga73kec_pubsub
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
@@ -117,25 +111,35 @@ catkin_package(
 # include_directories(include)
 
 ## Declare a C++ library
-# add_library(movement
-#   src/${PROJECT_NAME}/movement.cpp
+# add_library(ga73kec_pubsub
+#   src/${PROJECT_NAME}/ga73kec_pubsub.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(movement ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(ga73kec_pubsub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-add_executable(mover src/movement.cpp src/run_mover)
+# add_executable(ga73kec_pubsub_node src/ga73kec_pubsub_node.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(movement_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(ga73kec_pubsub_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
+# target_link_libraries(ga73kec_pubsub_node
+#   ${catkin_LIBRARIES}
+# )
+include_directories(include ${catkin_INCLUDE_DIRS})
 
+add_executable(talker src/talker.cpp)
+target_link_libraries(talker ${catkin_LIBRARIES})
+#add_dependencies(talker ga73kec_pubsub_generate_messages_cpp)
+
+add_executable(listener src/listener.cpp)
+target_link_libraries(listener ${catkin_LIBRARIES})
+#add_dependencies(listener ga73kec_pubsub_generate_messages_cpp)
 #############
 ## Install ##
 #############
@@ -151,7 +155,7 @@ target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS movement movement_node
+# install(TARGETS ga73kec_pubsub ga73kec_pubsub_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -176,7 +180,7 @@ target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_movement.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_ga73kec_pubsub.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

@@ -1,16 +1,13 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(movement)
+project(super_mario)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED roscpp tf
+find_package(catkin REQUIRED 
+  roscpp
   std_msgs
-  cv_bridge
-  sensor_msgs
-  image_transport
-  message_generation
-  )
+  cv_bridge)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -103,7 +100,7 @@ find_package(catkin REQUIRED roscpp tf
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES movement
+#  LIBRARIES super_mario
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
@@ -117,24 +114,25 @@ catkin_package(
 # include_directories(include)
 
 ## Declare a C++ library
-# add_library(movement
-#   src/${PROJECT_NAME}/movement.cpp
+# add_library(super_mario
+#   src/${PROJECT_NAME}/super_mario.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(movement ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(super_mario ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-add_executable(mover src/movement.cpp src/run_mover)
+ add_executable(super_mario src/super_mario.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(movement_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(super_mario_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
+ target_link_libraries(super_mario ${catkin_LIBRARIES} ${OpenCV_LIBS})
+# )
 
 #############
 ## Install ##
@@ -151,7 +149,7 @@ target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS movement movement_node
+# install(TARGETS super_mario super_mario_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -176,7 +174,7 @@ target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_movement.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_super_mario.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
