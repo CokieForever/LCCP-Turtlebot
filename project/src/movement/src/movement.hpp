@@ -10,10 +10,11 @@ class Mover
 public://Tunable parameters
 
   const static double FORWARD_SPEED_MPS = 0.2;
-  const static double MIN_SCAN_ANGLE_RAD = -0.37 + M_PI;
-  const static double MAX_SCAN_ANGLE_RAD = 0.37 + M_PI;
-  const static float  MIN_PROXIMITY_RANGE_M = 0.65;	//Should be smaller than sensor_msgs::LaserScan::range_max
-
+  const static double MIN_SCAN_ANGLE_RAD = -0.37 ;
+  const static double MAX_SCAN_ANGLE_RAD = 0.37 ;
+  const static double ROTATION_ANGLE = +60.0/180*M_PI;
+  const static float MIN_PROXIMITY_RANGE_M = 0.65;	// Should be smaller than sensor_msgs::LaserScan::range_max
+  const static double ANGLE_PRECISION = 1.0; //deg
   Mover();
   void startMoving();
   tf::TransformListener listener;
@@ -45,7 +46,7 @@ private:
 	//ros::Subscriber imageSub;
 	ros::Subscriber getLocationSub;
 	ros::Subscriber targetFinishedSub;
-
+    double *m_ranges;
     int m_searchMarker;
     float m_distanceToMarker;
     float m_angularVelocity;
@@ -54,8 +55,10 @@ private:
     bool m_gotTarget;
     geometry_msgs::Vector3Stamped m_target;
     int  m_nextId;
-	void moveRandomly();
 
+
+    void rotateTurtle(double angle);
+    void moveRandomly();
 	void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan);
 	void bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg);
 	//void rgbCallback(const sensor_msgs::ImageConstPtr &msg);
