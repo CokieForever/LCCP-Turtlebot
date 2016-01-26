@@ -1,6 +1,7 @@
 <launch>   
     <include file="$(find turtlebot_stage)/launch/turtlebot_in_stage.launch"/>
-    <node name="local_map" pkg="local_map" type="local_map">
+    <include file="$(find turtlebot_teleop)/launch/keyboard_teleop.launch"/>
+    <node name="local_map_scan" pkg="local_map" type="local_map" output="screen">
         <param name="map_resolution" type="double" value="0.05" />
         <param name="map_width" type="double" value="200" />
         <param name="map_height" type="double" value="200" />

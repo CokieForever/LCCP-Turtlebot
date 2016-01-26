@@ -284,7 +284,7 @@ class Grid
             if (m_data[k] == NULL)
                 m_data[k] = new ProbabilisticPoint;
             else if (point.t == m_data[k]->t)
-                point.p = 1 - (1-point.p)*(m_data[k]->p);
+                point.p = 1 - (1-point.p)*(1-m_data[k]->p);
             *(m_data[k]) = point;
 
             //ROS_INFO("Added to grid");
@@ -338,30 +338,34 @@ class DeadReckoning
         static const double MIN_PROXIMITY_RANGE;
         static const double MAX_LINEARSPEED;
         static const double MAX_ANGULARSPEED;
-        static const int SCREEN_HEIGHT = 600;
-        static const int SCREEN_WIDTH = 600;
+        static const int SCREEN_HEIGHT;
+        static const int SCREEN_WIDTH;
+        static const std::string LOCALMAP_SCAN_TRANSFORM_NAME;
+        static const std::string LOCALMAP_DEPTH_TRANSFORM_NAME;
+        static const std::string ROBOTPOS_TRANSFORM_NAME;
         
         ros::NodeHandle& m_node;
         ros::Subscriber m_orderSub;
         ros::Subscriber m_laserSub;
-        ros::Publisher m_laserPub;
+        ros::Publisher m_laserScanPub, m_laserDepthPub;
         ros::Subscriber m_depthSub;
         ros::Subscriber m_imuSub;
-        ros::Subscriber m_localMapSub;
-        double *m_ranges;
+        ros::Subscriber m_localMapScanSub, m_localMapDepthSub;
+        double *m_scanRanges, *m_depthRanges;
         bool m_simulation;
         ros::Time m_time;
         geometry_msgs::Vector3 m_position;
         double m_startOrientation;
         double m_linearSpeed;
         double m_angularSpeed;
-        Vector *m_cloudPoints;
-        int m_cloudPointsStartIdx;
-        Grid m_grid;
+        Vector *m_scanCloudPoints, *m_depthCloudPoints;
+        int m_scanCloudPointsStartIdx, m_depthCloudPointsStartIdx;
+        Grid m_scanGrid, m_depthGrid;
         SDL_Surface *m_screen;
         SDL_Surface *m_robotSurf;
         SDL_Surface *m_gridSurf;
         double m_minX, m_maxX, m_minY, m_maxY;
+        tf::TransformBroadcaster m_transformBroadcaster;
         
         static double modAngle(double rad)
         {
@@ -398,25 +402,37 @@ class DeadReckoning
             m_linearSpeed = order->linear.x;
             m_angularSpeed = order->angular.z;
             m_time = ros::Time::now();
+            
+            publishTransforms();
         }
         
-        void localMapCallback(const nav_msgs::OccupancyGrid::ConstPtr& grid)
+        void localMapScanCallback(const nav_msgs::OccupancyGrid::ConstPtr& occ)
         {
             //ROS_INFO("Received local map");
-
+            updateGridFromOccupancy(occ, m_scanGrid);
+        }
+        
+        void localMapDepthCallback(const nav_msgs::OccupancyGrid::ConstPtr& occ)
+        {
+            //ROS_INFO("Received local map");
+            updateGridFromOccupancy(occ, m_depthGrid);
+        }
+        
+        void updateGridFromOccupancy(const nav_msgs::OccupancyGrid::ConstPtr& occ, Grid& grid)
+        {
             ros::Time t = ros::Time::now();
-            for (int y=0 ; y < grid->info.height ; y++)
+            for (int y=0 ; y < occ->info.height ; y++)
             {
-                int k = y * grid->info.width;
-                double fy = /*(m_simulation ? 1 : -1) * */(m_position.y + (y-(int)grid->info.height/2)*grid->info.resolution);
-                for (int x=0 ; x < grid->info.width ; x++)
+                int k = y * occ->info.width;
+                double fy = m_position.y + (y-(int)occ->info.height/2)*occ->info.resolution;
+                for (int x=0 ; x < occ->info.width ; x++)
                 {
-                    double p = grid->data[k+x] / 100.0;
+                    double p = occ->data[k+x] / 100.0;
                     if (p >= 0)
                     {
                         //ROS_INFO("Point at (%d, %d): %.3f", x, y, p);
-                        double fx = /*(m_simulation ? 1 : -1) * */(m_position.x + (x-(int)grid->info.width/2)*grid->info.resolution);
-                        m_grid.addPoint(fx, fy, t, p);
+                        double fx = m_position.x + (x-(int)occ->info.width/2)*occ->info.resolution;
+                        grid.addPoint(fx, fy, t, p);
                     }
                 }
             }
@@ -447,7 +463,7 @@ class DeadReckoning
                 if (std::isnan(*iter_x) || std::isnan(*iter_y) || std::isnan(*iter_z))
                     continue;
 
-                if (*iter_y > 1.0 || *iter_y < -1.0)
+                if (*iter_y > 0.5 || *iter_y < -0.5)
                     continue;
                 
                 double range = hypot(*iter_x, *iter_z);
@@ -471,7 +487,7 @@ class DeadReckoning
             }
         }
 
-        void processLaserScan(sensor_msgs::LaserScan& scan, bool invert)
+        void processLaserScan(sensor_msgs::LaserScan& scan, bool invert, double *ranges, Vector *cloudPoints, int& startIdx)
         {
             int maxIdx = ceil(360 / ANGLE_PRECISION);
             int nbRanges = ceil((scan.angle_max - scan.angle_min) / scan.angle_increment);
@@ -494,70 +510,68 @@ class DeadReckoning
                 if (angleIdx != prevAngleIdx)
                 {
                     prevAngleIdx = angleIdx;
-                    m_ranges[angleIdx] = range;
+                    ranges[angleIdx] = range;
                 }
-                else if (m_ranges[angleIdx] > range)
-                    m_ranges[angleIdx] = range;
+                else if (ranges[angleIdx] > range)
+                    ranges[angleIdx] = range;
                 
                 if (!std::isinf(range))
                 {
                     double endX = range * cos(angle + m_position.z) + m_position.x;
                     double endY = range * sin(angle + m_position.z) + m_position.y;
-                    int cloudPointIdx = (i+m_cloudPointsStartIdx) % NB_CLOUDPOINTS;
-                    m_cloudPoints[cloudPointIdx].x = endX;
-                    m_cloudPoints[cloudPointIdx].y = endY;
+                    int cloudPointIdx = (i+startIdx) % NB_CLOUDPOINTS;
+                    cloudPoints[cloudPointIdx].x = endX;
+                    cloudPoints[cloudPointIdx].y = endY;
                     //ROS_INFO("Added cloud point (%.3f, %.3f)", endX, endY);
                 }
             }
-            m_cloudPointsStartIdx += nbRanges;
+            startIdx += nbRanges;
         }
 
         // Process the incoming laser scan message
         void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
         {
             sensor_msgs::LaserScan scanCopy = *scan;
-            processLaserScan(scanCopy, !m_simulation);
-            //publishLaserScan(scanCopy, !m_simulation);
+            processLaserScan(scanCopy, !m_simulation, m_scanRanges, m_scanCloudPoints, m_scanCloudPointsStartIdx);
+            
+            scanCopy.header.frame_id = LOCALMAP_SCAN_TRANSFORM_NAME;
+            m_laserScanPub.publish(scanCopy);
         }
         
         void depthCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
         {
             sensor_msgs::LaserScan scan;
             pointCloudToLaserScan(cloud, scan);
-            //processLaserScan(scan, false);
-            publishLaserScan(scan, false);
-        }
-
-        void publishLaserScan(sensor_msgs::LaserScan& scan, bool invert)
-        {
-            static tf::TransformBroadcaster br;
-            tf::Transform transform;
-            transform.setOrigin( tf::Vector3(m_position.x, m_position.y, 0.0) );
-            tf::Quaternion q;
-            q.setRPY(0, 0, invert ? modAngle(m_position.z+M_PI) : m_position.z);
-            transform.setRotation(q);
-            br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "dr_pos"));
+            processLaserScan(scan, false, m_depthRanges, m_depthCloudPoints, m_depthCloudPointsStartIdx);
             
-            scan.header.frame_id = "dr_pos";
-            m_laserPub.publish(scan);
+            scan.header.frame_id = LOCALMAP_DEPTH_TRANSFORM_NAME;
+            m_laserDepthPub.publish(scan);
         }
         
-        bool proximityAlert()
+        void publishTransforms()
         {
-            int idx = ceil(45 / ANGLE_PRECISION);
-            for (int i=0 ; i < idx ; i++)
+            tf::Transform transform;
+            tf::Quaternion q;
+            
+            transform.setOrigin( tf::Vector3(m_position.x, m_position.y, 0.0) );
+            q.setRPY(0, 0, m_simulation ? m_position.z : modAngle(m_position.z+M_PI));
+            transform.setRotation(q);
+            m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", LOCALMAP_SCAN_TRANSFORM_NAME));
+            
+            if (!m_simulation)
             {
-                if (m_ranges[i] <= MIN_PROXIMITY_RANGE)
-                    return true;
+                transform.setOrigin( tf::Vector3(m_position.x, m_position.y, 0.0) );
+                q.setRPY(0, 0, m_position.z);
+                transform.setRotation(q);
+                m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", LOCALMAP_DEPTH_TRANSFORM_NAME));
             }
-            idx = ceil(360 / ANGLE_PRECISION);
-            for (int i=floor(315 / ANGLE_PRECISION) ; i < idx ; i++)
-            {
-                if (m_ranges[i] <= MIN_PROXIMITY_RANGE)
-                    return true;
-            }
-            return false;
+            
+            transform.setOrigin( tf::Vector3(m_position.x, m_position.y, 0.0) );
+            q.setRPY(0, 0, m_position.z);
+            transform.setRotation(q);
+            m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", ROBOTPOS_TRANSFORM_NAME));
         }
+        
 
         bool initSDL()
         {
@@ -594,21 +608,31 @@ class DeadReckoning
             Vector speed = {m_linearSpeed * cos(m_position.z), m_linearSpeed * sin(m_position.z)};
             Vector acceleration = {-m_linearSpeed * m_angularSpeed * sin(m_position.z), m_linearSpeed * m_angularSpeed * cos(m_position.z)};
             
+            SDL_Rect rect = {0};
             SDL_FillRect(m_screen, 0, SDL_MapRGB(m_screen->format, 255,255,255));
             
-            SDL_Rect rect = {0};
             SDL_FillRect(m_gridSurf, NULL, SDL_MapRGB(m_gridSurf->format, 0,0,0));
-            m_grid.draw(SCREEN_WIDTH, SCREEN_HEIGHT, m_minX, m_maxX, m_minY, m_maxY, m_gridSurf);
+            m_scanGrid.draw(SCREEN_WIDTH, SCREEN_HEIGHT, m_minX, m_maxX, m_minY, m_maxY, m_gridSurf);
             SDL_BlitSurface(m_gridSurf, NULL, m_screen, &rect);
+            
+            if (!m_simulation)
+            {
+                SDL_FillRect(m_gridSurf, NULL, SDL_MapRGB(m_gridSurf->format, 0,0,0));
+                m_depthGrid.draw(SCREEN_WIDTH, SCREEN_HEIGHT, m_minX, m_maxX, m_minY, m_maxY, m_gridSurf);
+                SDL_BlitSurface(m_gridSurf, NULL, m_screen, &rect);
+            }
             
             double kx = SCREEN_WIDTH / (m_maxX - m_minX);
             double ky = SCREEN_HEIGHT / (m_maxY - m_minY);
             
-            Uint32 black = SDL_MapRGB(m_screen->format, 0,0,0);
+            Uint32 green = SDL_MapRGB(m_screen->format, 0,128,0);
+            Uint32 blue = SDL_MapRGB(m_screen->format, 0,0,255);
             for (int i=0 ; i < NB_CLOUDPOINTS ; i++)
             {
-                if (!isnan(m_cloudPoints[i].x) && !isnan(m_cloudPoints[i].y))
-                    putPixel(m_screen, (m_cloudPoints[i].x-m_minX) * kx, SCREEN_HEIGHT - (m_cloudPoints[i].y-m_minY) * ky, black);
+                if (!isnan(m_scanCloudPoints[i].x) && !isnan(m_scanCloudPoints[i].y))
+                    putPixel(m_screen, (m_scanCloudPoints[i].x-m_minX) * kx, SCREEN_HEIGHT - (m_scanCloudPoints[i].y-m_minY) * ky, green);
+                if (!m_simulation && !isnan(m_depthCloudPoints[i].x) && !isnan(m_depthCloudPoints[i].y))
+                    putPixel(m_screen, (m_depthCloudPoints[i].x-m_minX) * kx, SCREEN_HEIGHT - (m_depthCloudPoints[i].y-m_minY) * ky, blue);
             }
 
             int x = (m_position.x-m_minX) * kx;
@@ -616,8 +640,8 @@ class DeadReckoning
             rect.x = x-m_robotSurf->w/2;
             rect.y = y-m_robotSurf->h/2;
             SDL_BlitSurface(m_robotSurf, NULL, m_screen, &rect);
-            drawLine(m_screen, x, y, x + speed.x*kx, y - speed.y*ky, createColor(0,0,255));
-            drawLine(m_screen, x, y, x + acceleration.x*kx, y - acceleration.y*ky, createColor(255,0,0));
+            drawLine(m_screen, x, y, x + 3*speed.x*kx, y - 3*speed.y*ky, createColor(0,0,255));
+            drawLine(m_screen, x, y, x + 3*acceleration.x*kx, y - 3*acceleration.y*ky, createColor(255,0,0));
             drawLine(m_screen, x, y, x+30*cos(m_position.z), y-30*sin(m_position.z), createColor(0,0,0));
             
             SDL_Flip(m_screen);
@@ -627,7 +651,8 @@ class DeadReckoning
 
     public:
         DeadReckoning(ros::NodeHandle& node, bool simulation=true, double minX=-5, double maxX=5, double minY=-5, double maxY=5):
-            m_node(node), m_simulation(simulation), m_cloudPointsStartIdx(0),
+            m_node(node), m_simulation(simulation),
+            m_scanCloudPointsStartIdx(0), m_depthCloudPointsStartIdx(0),
             m_angularSpeed(0), m_linearSpeed(0),
             m_minX(minX), m_maxX(maxX), m_minY(minY), m_maxY(maxY)
         {
@@ -650,22 +675,31 @@ class DeadReckoning
             }
             
             m_startOrientation = m_position.z;
-            m_grid = Grid(0.05, ros::Duration(120.0), m_minX, m_maxX, m_minY, m_maxY, false);
+            m_scanGrid = Grid(0.05, ros::Duration(120.0), m_minX, m_maxX, m_minY, m_maxY, false);
+            m_depthGrid = m_scanGrid;
             
             int nbRanges = ceil(360 / ANGLE_PRECISION);
-            m_ranges = new double[nbRanges];
-            //TODO exception if m_ranges == NULL
+            m_scanRanges = new double[nbRanges];
+            //TODO exception if m_scanRanges == NULL
             for (int i=0 ; i < nbRanges ; i++)
-                m_ranges[i] = nan("");
+                m_scanRanges[i] = nan("");
+            
+            m_depthRanges = new double[nbRanges];
+            //TODO exception if m_depthRanges == NULL
+            memcpy(m_depthRanges, m_scanRanges, sizeof(double)*nbRanges);
 
-            m_cloudPoints = new Vector[NB_CLOUDPOINTS];
-            //TODO exception if m_cloudPoints == NULL
+            m_scanCloudPoints = new Vector[NB_CLOUDPOINTS];
+            //TODO exception if m_scanCloudPoints == NULL
             for (int i=0 ; i < NB_CLOUDPOINTS ; i++)
             {
-                m_cloudPoints[i].x = nan("");
-                m_cloudPoints[i].y = nan("");
+                m_scanCloudPoints[i].x = nan("");
+                m_scanCloudPoints[i].y = nan("");
             }
-
+            
+            m_depthCloudPoints = new Vector[NB_CLOUDPOINTS];
+            //TODO exception if m_depthCloudPoints == NULL
+            memcpy(m_depthCloudPoints, m_scanCloudPoints, sizeof(Vector)*NB_CLOUDPOINTS);
+            
             // Subscribe to the robot's laser scan topic
             m_laserSub = m_node.subscribe<sensor_msgs::LaserScan>("/scan", 1, &DeadReckoning::scanCallback, this);
             ROS_INFO("Waiting for laser scan...");
@@ -685,7 +719,7 @@ class DeadReckoning
             }
             
             m_orderSub = m_node.subscribe<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1000, &DeadReckoning::moveOrderCallback, this);
-            ROS_INFO("Waiting for orders...");
+            ROS_INFO("Waiting for commands publisher...");
             while (ros::ok() && m_orderSub.getNumPublishers() <= 0)
                 rate.sleep();
             checkRosOk_v();
@@ -699,12 +733,22 @@ class DeadReckoning
                 checkRosOk_v();
             }
             
-            m_laserPub = m_node.advertise<sensor_msgs::LaserScan>("/local_map/scan", 10);
-            m_localMapSub = m_node.subscribe<nav_msgs::OccupancyGrid>("/local_map/local_map", 10, &DeadReckoning::localMapCallback, this);
-            ROS_INFO("Waiting for local_map...");
-            while (ros::ok() && (m_localMapSub.getNumPublishers() <= 0 || m_laserPub.getNumSubscribers() <= 0))
+            m_laserScanPub = m_node.advertise<sensor_msgs::LaserScan>("/local_map_scan/scan", 10);
+            m_localMapScanSub = m_node.subscribe<nav_msgs::OccupancyGrid>("/local_map_scan/local_map", 10, &DeadReckoning::localMapScanCallback, this);
+            ROS_INFO("Waiting for scan local_map...");
+            while (ros::ok() && (m_localMapScanSub.getNumPublishers() <= 0 || m_laserScanPub.getNumSubscribers() <= 0))
                 rate.sleep();
             checkRosOk_v();
+            
+            m_laserDepthPub = m_node.advertise<sensor_msgs::LaserScan>("/local_map_depth/scan", 10);
+            m_localMapDepthSub = m_node.subscribe<nav_msgs::OccupancyGrid>("/local_map_depth/local_map", 10, &DeadReckoning::localMapDepthCallback, this);
+            if (!m_simulation)
+            {
+                ROS_INFO("Waiting for depth local_map...");
+                while (ros::ok() && (m_localMapDepthSub.getNumPublishers() <= 0 || m_laserDepthPub.getNumSubscribers() <= 0))
+                    rate.sleep();
+                checkRosOk_v();
+            }
             
             m_time = ros::Time::now();
             ROS_INFO("Ok, let's go.");
@@ -712,10 +756,14 @@ class DeadReckoning
 
         ~DeadReckoning()
         {
-            if (m_ranges != NULL)
-                delete m_ranges;
-            if (m_cloudPoints != NULL)
-                delete m_cloudPoints;
+            if (m_scanRanges != NULL)
+                delete m_scanRanges;
+            if (m_scanCloudPoints != NULL)
+                delete m_scanCloudPoints;
+            if (m_depthRanges != NULL)
+                delete m_depthRanges;
+            if (m_depthCloudPoints != NULL)
+                delete m_depthCloudPoints;
             if (m_gridSurf != NULL)
                 SDL_FreeSurface(m_gridSurf);
         }
@@ -739,7 +787,11 @@ const double DeadReckoning::MIN_PROXIMITY_RANGE = 0.5; // Should be smaller than
 const double DeadReckoning::MAX_LINEARSPEED = 0.5;
 const double DeadReckoning::MAX_ANGULARSPEED = M_PI/4;
 const double DeadReckoning::MAX_RANGE = 15.0;
-
+const int DeadReckoning::SCREEN_HEIGHT = 600;
+const int DeadReckoning::SCREEN_WIDTH = 600;
+const std::string DeadReckoning::LOCALMAP_SCAN_TRANSFORM_NAME = "localmap_pos_scan";
+const std::string DeadReckoning::LOCALMAP_DEPTH_TRANSFORM_NAME = "localmap_pos_depth";
+const std::string DeadReckoning::ROBOTPOS_TRANSFORM_NAME = "deadreckoning_robotpos";
 
 int main(int argc, char **argv)
 {
