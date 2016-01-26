@@ -9,12 +9,16 @@ int main( int argc, char** argv )
 {
   ros::init(argc, argv, "super_mario");
   ros::NodeHandle nh;
-  cv::Mat templ;
+  cv::Mat coin;
+  cv::Mat mushroom;
+  cv::Mat star;
   /// Load image and template
-  templ = imread( "/home/alex/Desktop/screenshots/coin-us-dollar-icon.png", 1 );
+  coin = imread( "/home/ga73kec/Pictures/LCPP/templates/coin.png", 1 );
+  mushroom = imread( "/home/ga73kec/Pictures/LCPP/templates/mushroom.png", 1 );
+  star = imread( "/home/ga73kec/Pictures/LCPP/templates/star.png", 1 );
   ROS_INFO("Read image");
 
-  SuperMario sm(nh,templ);
+  SuperMario sm(nh,coin, mushroom, star);
   sm.Start();
 
 }

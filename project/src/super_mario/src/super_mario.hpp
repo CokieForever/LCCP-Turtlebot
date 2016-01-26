@@ -13,7 +13,7 @@
 class SuperMario
 {
 public:
-  SuperMario(ros::NodeHandle &nh, cv::Mat &tmpl);
+  SuperMario(ros::NodeHandle &nh, cv::Mat &tmpl1, cv::Mat &tmpl2, cv::Mat &tmpl3 );
   void Start();
 private:
   void imageCallback(const sensor_msgs::ImageConstPtr &img_msg);
@@ -26,6 +26,10 @@ private:
 
 
   cv::Mat m_img; cv::Mat m_templ; cv::Mat m_result; cv::Mat m_newResult;
+  cv::Mat m_templ1;
+  cv::Mat m_templ2;
+  cv::Mat m_templ3;
+  bool m_take_screenshot;
   int m_match_method;
   cv::Mat m_check_img;
   bool m_checkcoin;

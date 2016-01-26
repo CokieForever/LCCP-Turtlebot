@@ -137,6 +137,7 @@ void Mover::rotateOdom(double angle)
             m_keepMoving=true;
             runFirstTime =true;
         }
+        ROS_INFO("MIDDLE OF ROTATION");
         ros::spinOnce();
 
     }
@@ -147,6 +148,7 @@ void Mover::rotateOdom(double angle)
 //Callback of the /scan topic. Checks wether an obstacle disturbs forward movement
 void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
+
     int minIndex = ceil((MIN_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
     int maxIndex = floor((MAX_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
     float closestRange = scan->ranges[minIndex];
@@ -155,18 +157,24 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
     ROS_INFO("Distance to marker %f !", m_distanceToMarker);
     for(int currIndex = minIndex+1; currIndex<=maxIndex; currIndex++)
     {
-        if(scan->ranges[currIndex] < closestRange)
+        if(scan->ranges[currIndex] != scan->ranges[currIndex] && scan->ranges[currIndex] < closestRange )
         {
             closestRange =	scan->ranges[currIndex];
         }
     }
-    //ROS_INFO("closest range = %f", closestRange);
+
+
 
     // ********************   1     ********************
+
+    float closestRangeDiff = m_distanceToMarker - 1.0;
+   // ROS_INFO("closest range diff = %f", closestRangeDiff);
+
     std_msgs::Bool msg_bool;
-    if ((closestRange - 1)<= 0)
+    if (closestRangeDiff<= 0)
     {
         //Check if scanned object is a Coin
+        ROS_INFO("checking object...");
         msg_bool.data = true;
         marioPub.publish(msg_bool);
     }
@@ -191,12 +199,14 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
         //rotate only if not approaching target
         ROS_INFO("Obstacle in %f Turn 25 degrees!", closestRange);
         rotateOdom(25.0);
+        ROS_INFO("end of scan");
 
     }
     else
     {
         m_keepMoving = true;
     }
+
     ros::spinOnce();
 }
 
