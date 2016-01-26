@@ -1,5 +1,5 @@
 <launch>   
-	<include file="$(find turtlebot_stage)/launch/turtlebot_in_stage.launch"/>
+    <include file="$(find turtlebot_stage)/launch/turtlebot_in_stage.launch"/>
     <node name="local_map" pkg="local_map" type="local_map">
         <param name="map_resolution" type="double" value="0.05" />
         <param name="map_width" type="double" value="200" />

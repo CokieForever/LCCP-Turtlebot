@@ -283,6 +283,8 @@ class Grid
             
             if (m_data[k] == NULL)
                 m_data[k] = new ProbabilisticPoint;
+            else if (point.t == m_data[k]->t)
+                point.p = 1 - (1-point.p)*(m_data[k]->p);
             *(m_data[k]) = point;
 
             //ROS_INFO("Added to grid");
@@ -327,7 +329,7 @@ class Grid
         }
 };
 
-class RobotPilot
+class DeadReckoning
 {
     private:
         static const double ANGLE_PRECISION;  //deg
@@ -624,7 +626,7 @@ class RobotPilot
         }
 
     public:
-        RobotPilot(ros::NodeHandle& node, bool simulation=true, double minX=-5, double maxX=5, double minY=-5, double maxY=5):
+        DeadReckoning(ros::NodeHandle& node, bool simulation=true, double minX=-5, double maxX=5, double minY=-5, double maxY=5):
             m_node(node), m_simulation(simulation), m_cloudPointsStartIdx(0),
             m_angularSpeed(0), m_linearSpeed(0),
             m_minX(minX), m_maxX(maxX), m_minY(minY), m_maxY(maxY)
@@ -665,7 +667,7 @@ class RobotPilot
             }
 
             // Subscribe to the robot's laser scan topic
-            m_laserSub = m_node.subscribe<sensor_msgs::LaserScan>("/scan", 1, &RobotPilot::scanCallback, this);
+            m_laserSub = m_node.subscribe<sensor_msgs::LaserScan>("/scan", 1, &DeadReckoning::scanCallback, this);
             ROS_INFO("Waiting for laser scan...");
             ros::Rate rate(10);
             while (ros::ok() && m_laserSub.getNumPublishers() <= 0)
@@ -673,7 +675,7 @@ class RobotPilot
             checkRosOk_v();
             
             // Subscribe to the robot's depth cloud topic
-            m_depthSub = m_node.subscribe<sensor_msgs::PointCloud2>("/camera/depth/points", 1, &RobotPilot::depthCallback, this);
+            m_depthSub = m_node.subscribe<sensor_msgs::PointCloud2>("/camera/depth/points", 1, &DeadReckoning::depthCallback, this);
             if (!m_simulation)
             {
                 ROS_INFO("Waiting for depth cloud...");
@@ -682,13 +684,13 @@ class RobotPilot
                 checkRosOk_v();
             }
             
-            m_orderSub = m_node.subscribe<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1000, &RobotPilot::moveOrderCallback, this);
+            m_orderSub = m_node.subscribe<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1000, &DeadReckoning::moveOrderCallback, this);
             ROS_INFO("Waiting for orders...");
             while (ros::ok() && m_orderSub.getNumPublishers() <= 0)
                 rate.sleep();
             checkRosOk_v();
             
-            m_imuSub = m_node.subscribe<sensor_msgs::Imu>("/mobile_base/sensors/imu_data", 1000, &RobotPilot::IMUCallback, this);
+            m_imuSub = m_node.subscribe<sensor_msgs::Imu>("/mobile_base/sensors/imu_data", 1000, &DeadReckoning::IMUCallback, this);
             if (!m_simulation)
             {
                 ROS_INFO("Waiting for IMU...");
@@ -698,7 +700,7 @@ class RobotPilot
             }
             
             m_laserPub = m_node.advertise<sensor_msgs::LaserScan>("/local_map/scan", 10);
-            m_localMapSub = m_node.subscribe<nav_msgs::OccupancyGrid>("/local_map/local_map", 10, &RobotPilot::localMapCallback, this);
+            m_localMapSub = m_node.subscribe<nav_msgs::OccupancyGrid>("/local_map/local_map", 10, &DeadReckoning::localMapCallback, this);
             ROS_INFO("Waiting for local_map...");
             while (ros::ok() && (m_localMapSub.getNumPublishers() <= 0 || m_laserPub.getNumSubscribers() <= 0))
                 rate.sleep();
@@ -708,7 +710,7 @@ class RobotPilot
             ROS_INFO("Ok, let's go.");
         }
 
-        ~RobotPilot()
+        ~DeadReckoning()
         {
             if (m_ranges != NULL)
                 delete m_ranges;
@@ -731,12 +733,12 @@ class RobotPilot
         }
 };
 
-const double RobotPilot::ANGLE_PRECISION = 0.1; //deg
-const int RobotPilot::NB_CLOUDPOINTS = 1000;
-const double RobotPilot::MIN_PROXIMITY_RANGE = 0.5; // Should be smaller than sensor_msgs::LaserScan::range_max
-const double RobotPilot::MAX_LINEARSPEED = 0.5;
-const double RobotPilot::MAX_ANGULARSPEED = M_PI/4;
-const double RobotPilot::MAX_RANGE = 15.0;
+const double DeadReckoning::ANGLE_PRECISION = 0.1; //deg
+const int DeadReckoning::NB_CLOUDPOINTS = 1000;
+const double DeadReckoning::MIN_PROXIMITY_RANGE = 0.5; // Should be smaller than sensor_msgs::LaserScan::range_max
+const double DeadReckoning::MAX_LINEARSPEED = 0.5;
+const double DeadReckoning::MAX_ANGULARSPEED = M_PI/4;
+const double DeadReckoning::MAX_RANGE = 15.0;
 
 
 int main(int argc, char **argv)
@@ -759,8 +761,8 @@ int main(int argc, char **argv)
         minX = 0; maxX = 10;
         minY = 0; maxY = 10;
     }
-    RobotPilot pilot(node, simulation, minX, maxX, minY, maxY);
-    pilot.reckon();
+    DeadReckoning dr(node, simulation, minX, maxX, minY, maxY);
+    dr.reckon();
     
     ROS_INFO("Bye!");
     return 0;
