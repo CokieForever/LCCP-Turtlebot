@@ -17,7 +17,6 @@ Mover::Mover()
     //distance between marker and turtlebot
     m_distanceToMarker = 9999;
     //Publishers
-    marioPub = node.advertise<std_msgs::Bool>("/super_mario/check_object", 10);
     commandPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 10);
     targetReachedRequest = node.advertise<std_msgs::Empty>("targetReached", 10);
 
@@ -161,22 +160,7 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
         }
     }
     //ROS_INFO("closest range = %f", closestRange);
-
-    // ********************   1     ********************
-    std_msgs::Bool msg_bool;
-    if ((closestRange - 1)<= 0)
-    {
-        //Check if scanned object is a Coin
-        msg_bool.data = true;
-        marioPub.publish(msg_bool);
-    }
-    else
-    {
-        msg_bool.data = false;
-        marioPub.publish(msg_bool);
-    }
-
-    if(closestRange<MIN_PROXIMITY_RANGE_M)
+    if(closestRange < MIN_PROXIMITY_RANGE_M)
     {
         m_keepMoving=false;
         /*  //check if you have a target we are heading for
