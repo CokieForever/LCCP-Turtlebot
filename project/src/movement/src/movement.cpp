@@ -13,7 +13,8 @@ Mover::Mover()
     m_reachedTarget = false;
     m_nextId = 0;
     m_searchMarker = 0;
-
+    m_finishedMarkerSearch = false;
+    m_outOfSight = true;
     //distance between marker and turtlebot
     m_distanceToMarker = 9999;
     //Publishers
@@ -26,6 +27,7 @@ Mover::Mover()
     //  imageSub = node.subscribe("/camera/rgb/image_rect_color", 10, &Mover::rgbCallback, this);
     getLocationSub = node.subscribe("/markerinfo", 10, &Mover::getLocationCallback, this);
     targetFinishedSub = node.subscribe("targetFinishedTopic", 10, &Mover::targetFinishedCallback, this);
+
 }
 
 
@@ -150,7 +152,9 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
     int maxIndex = floor((MAX_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
     float closestRange = scan->ranges[minIndex];
     //save distance between robot and marker (which is in the center)
-    if(scan->ranges[0]<=10 && scan->ranges[0]!=INFINITY){m_distanceToMarker = scan->ranges[0];}
+    if(scan->ranges[0]<=10 && scan->ranges[0]!=INFINITY){
+        m_distanceToMarker = scan->ranges[0];
+    }
     ROS_INFO("Distance to marker %f !", m_distanceToMarker);
     for(int currIndex = minIndex+1; currIndex<=maxIndex; currIndex++)
     {
@@ -175,7 +179,6 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
         //rotate only if not approaching target
         ROS_INFO("Obstacle in %f Turn 25 degrees!", closestRange);
         rotateOdom(25.0);
-
     }
     else
     {
@@ -190,15 +193,15 @@ void Mover::bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumperSu
     if(bumperSub_msg->state)
     {
         switch(bumperSub_msg->bumper)
-          {
-            case 0: ROS_INFO("You just get bumped on the left!");
-                    break;
-            case 1: ROS_INFO("You just get bumped in the middle!");
-                    break;
-            case 2: ROS_INFO("You just get bumped on the right!");
-                    break;
-          default:  ROS_INFO("I bumped a ghost :P");
-          }
+        {
+        case 0: ROS_INFO("You just get bumped on the left!");
+            break;
+        case 1: ROS_INFO("You just get bumped in the middle!");
+            break;
+        case 2: ROS_INFO("You just get bumped on the right!");
+            break;
+        default:  ROS_INFO("I bumped a ghost :P");
+        }
 
         //Move backwards
         geometry_msgs::Twist base_cmd;
@@ -224,10 +227,9 @@ void Mover::approachMarker(int param_marker_id)
     if (m_distanceToMarker > 1.5)
         vel_msg.linear.x = 0.5;
     else
-        vel_msg.linear.x = 0.3*m_distanceToMarker;
-
+        vel_msg.linear.x = 0.3* m_distanceToMarker;
+    //decrease velocity as bot gets closer to target
     commandPub.publish(vel_msg);
-
     if (f_distance_old != m_distanceToMarker)
     {
         if ((m_distanceToMarker - f_distance_old) > 0.1)
@@ -239,15 +241,12 @@ void Mover::approachMarker(int param_marker_id)
         }
         else
             b_invalid_object = false;
-            f_distance_old = m_distanceToMarker;
+        f_distance_old = m_distanceToMarker;
     }
     //return the robot to its correct course
     commandPub.publish(vel_msg);
-    //ROS_INFO("Distance to marker: %f", floor(m_distanceToMarker*10)/10 );
-    //if (floor(m_distanceToMarker*10)/10 == 0.7 && m_gotTarget && param_marker_id == m_searchMarker && !b_invalid_object)
-      if (m_distanceToMarker<=0.7 && m_gotTarget && param_marker_id == m_searchMarker && !b_invalid_object)
-
-      {
+    if ((m_distanceToMarker<=0.7) && m_gotTarget && (param_marker_id == m_searchMarker) && !b_invalid_object)
+    {
         if (m_searchMarker == 7)
         {
             m_finishedMarkerSearch = true;
@@ -265,6 +264,7 @@ void Mover::approachMarker(int param_marker_id)
         rotateOdom(180);
         ROS_INFO("Turned 180 degrees");
     }
+
     rateX.sleep();
     ros::spinOnce();
 }
@@ -277,7 +277,9 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
         //map the coordiante to the center
         int i_array_length = marker_msg->infos.size();
         float f_Xm = 0.0;
+        //float f_Ym = marker_msg->infos[i].y;
         int i_marker_id = 0;
+        m_outOfSight = false;
         for (int i=0; i<i_array_length; i++)
         {
             //check if marker id is equal to the next id that the bot is searching
@@ -288,11 +290,38 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
                 i_marker_id = marker_msg->infos[i].id;
                 m_gotTarget = true;
                 m_reachedTarget = false;
+                m_outOfSight = true;
             }
         }
+
         //ROS_INFO("Location of marker: %f", f_Xm);
         //was if (!m_reachedTarget && f_Xm!=0.0 && m_gotTarget)
-        if (!m_reachedTarget && m_gotTarget)
+        while (m_gotTarget && m_outOfSight)
+        {
+            //move to transform approach
+            ros::Rate rate(10);
+            //TF - decrease distance to target
+            tf::StampedTransform transform;
+            try{
+                m_coordinateListener.lookupTransform("turtlebot", "deadreckoning_robotpos",
+                                                     ros::Time(0), transform);
+            }
+            catch (tf::TransformException &ex) {
+                ROS_ERROR("%s",ex.what());
+
+                ros::Duration(1.0).sleep();
+                continue;
+            }
+            geometry_msgs::Twist vel_msg;
+            vel_msg.angular.z = 4.0 * atan2(transform.getOrigin().y(),
+                                            transform.getOrigin().x());
+            vel_msg.linear.x = 0.5 * sqrt(pow(transform.getOrigin().x(), 2) +
+                                          pow(transform.getOrigin().y(), 2));
+            commandPub.publish(vel_msg);
+            ros::spinOnce();
+            rate.sleep();
+        }
+        if (!m_reachedTarget && m_gotTarget && !m_outOfSight)
         {
             //adjust robot, so the marker actually is in the center
             if (f_Xm < 0)
@@ -353,7 +382,7 @@ void Mover::startMoving()
         }
         else
         {
-         //   driveForwardOdom(0.2);
+            //   driveForwardOdom(0.2);
             if (m_finishedMarkerSearch)
             {
                 ROS_INFO("Done!");

@@ -44,7 +44,9 @@ private:
     ros::Subscriber getLocationSub;
     ros::Subscriber targetFinishedSub;
 
-    bool m_finishedMarkerSearch = false;
+    tf::TransformListener m_coordinateListener;
+    bool m_outOfSight; //set this attribute if turtlebot got target, but it went out of sight
+    bool m_finishedMarkerSearch;
     int m_searchMarker;
     float m_distanceToMarker;
     float m_angularVelocity;
