@@ -8,6 +8,9 @@
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <tf/transform_broadcaster.h>
+#include "dead_reckoning/Grid.h"
+#include "detect_marker/MarkerInfo.h"
+#include "detect_marker/MarkersInfos.h"
 
 #include "../../utilities.h"
 
@@ -298,6 +301,27 @@ class Grid
             return _get(ix, iy);
         }
         
+        double* getAll(int* width=NULL, int *height=NULL, double *scale=NULL) const
+        {
+            double *data = new double[m_width*m_height];
+            //TODO check if data != NULL
+            for (int x=0 ; x < m_width ; x++)
+            {
+                int k = x * m_height;
+                for (int y=0 ; y < m_height ; y++)
+                {
+                    data[k+y] = m_data[k+y]->p;
+                }
+            }
+            if (width != NULL)
+                *width = m_width;
+            if (height != NULL)
+                *height = m_height;
+            if (scale != NULL)
+                *scale = m_precision;
+            return data;
+        }
+        
         SDL_Surface* draw(int w, int h, double minX, double maxX, double minY, double maxY, SDL_Surface *surf=NULL)
         {
             //ROS_INFO("Drawing grid");
@@ -343,14 +367,19 @@ class DeadReckoning
         static const std::string LOCALMAP_SCAN_TRANSFORM_NAME;
         static const std::string LOCALMAP_DEPTH_TRANSFORM_NAME;
         static const std::string ROBOTPOS_TRANSFORM_NAME;
+        static const std::string MARKERPOS_TRANSFORM_NAME
+        static const double MARKER_SIZE;
+        static const double MARKER_REF_DIST;
         
         ros::NodeHandle& m_node;
         ros::Subscriber m_orderSub;
         ros::Subscriber m_laserSub;
-        ros::Publisher m_laserScanPub, m_laserDepthPub;
         ros::Subscriber m_depthSub;
         ros::Subscriber m_imuSub;
         ros::Subscriber m_localMapScanSub, m_localMapDepthSub;
+        ros::Subscriber m_markersSub;
+        ros::Publisher m_laserScanPub, m_laserDepthPub;
+        ros::Publisher m_scanGridPub, m_depthGridPub;
         double *m_scanRanges, *m_depthRanges;
         bool m_simulation;
         ros::Time m_time;
@@ -366,10 +395,27 @@ class DeadReckoning
         SDL_Surface *m_gridSurf;
         double m_minX, m_maxX, m_minY, m_maxY;
         tf::TransformBroadcaster m_transformBroadcaster;
+        Vector m_markersPos[256];
+        
         
         static double modAngle(double rad)
         {
             return fmod(fmod(rad, 2*M_PI) + 2*M_PI, 2*M_PI);
+        }
+        
+        void markersCallback(const detect_marker::MarkersInfos::ConstPtr& markersInfos)
+        {
+            for (std::vector<MarkerInfo>::const_iterator it = markersInfos->infos.begin() ; it != markersInfos->infos.end() ; it++)
+            {
+                if (it->id < 0 || it->id > 255)
+                    continue;
+                double angle = -atan(it->x*MARKER_SIZE / (2*MARKER_REF_DIST));
+                double d = it->d / cos(angle);
+                angle += m_position.z;
+                m_markersPos[it->id].x = d * cosAngle + m_position.x;
+                m_markersPos[it->id].y = d * sin(angle) + m_position.y;
+            }
+            publishMarkersTransforms();
         }
 
         void IMUCallback(const sensor_msgs::Imu::ConstPtr& imu)
@@ -410,12 +456,14 @@ class DeadReckoning
         {
             //ROS_INFO("Received local map");
             updateGridFromOccupancy(occ, m_scanGrid);
+            publishGrid(m_scanGrid, m_scanGridPub);
         }
         
         void localMapDepthCallback(const nav_msgs::OccupancyGrid::ConstPtr& occ)
         {
             //ROS_INFO("Received local map");
             updateGridFromOccupancy(occ, m_depthGrid);
+            publishGrid(m_depthGrid, m_depthGridPub);
         }
         
         void updateGridFromOccupancy(const nav_msgs::OccupancyGrid::ConstPtr& occ, Grid& grid)
@@ -572,6 +620,38 @@ class DeadReckoning
             m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", ROBOTPOS_TRANSFORM_NAME));
         }
         
+        void publishMarkersTransforms()
+        {
+            tf::Transform transform;
+            tf::Quaternion q;
+            char transformName[100];
+            
+            q.setRPY(0, 0, 0);
+            transform.setRotation(q);
+                
+            for (int i=0 ; i < 256 ; i++)
+            {
+                if (isnan(m_markerPos[i].x) || isnan(m_markerPos[i].y))
+                    continue;
+                snprintf(transformName, 100, "%s_%d", MARKERPOS_TRANSFORM_NAME.c_str(), i);
+                transform.setOrigin( tf::Vector3(m_markerPos[i].x, m_markerPos[i].y, 0.0) );
+                m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", transformName));
+            }
+        }
+        
+        void publishGrid(const Grid& grid, ros::Publisher& pub)
+        {
+            dead_reckoning::Grid gridMsg;
+            int width, height;
+            double scale;
+            double *data = grid.getAll(&width, &height, &scale);
+            gridMsg.data.assign(data, data+width*height);
+            gridMsg.width = width;
+            gridMsg.height = height;
+            gridMsg.scale = scale;
+            pub.publish(gridMsg);
+            delete data;
+        }
 
         bool initSDL()
         {
@@ -635,10 +715,24 @@ class DeadReckoning
                     putPixel(m_screen, (m_depthCloudPoints[i].x-m_minX) * kx, SCREEN_HEIGHT - (m_depthCloudPoints[i].y-m_minY) * ky, blue);
             }
 
-            int x = (m_position.x-m_minX) * kx;
-            int y = SCREEN_HEIGHT - (m_position.y-m_minY) * ky;
+            int x, y;
+            for (int i=0 ; i < 256 ; i++)
+            {
+                if (isnan(m_markersPos[i].x) || isnan(m_markersPos[i].y))
+                    continue;
+                convertPosToDisplayCoord(m_markersPos[i].x, m_markersPos[i].y, x, y);
+                rect.x = x-m_markerSurf->w/2;
+                rect.y = y-m_markerSurf->h/2;
+                SDL_BlitSurface(m_markerSurf, NULL, m_screen, &rect);
+            }
+            
+            convertPosToDisplayCoord(m_position.x, m_position.y, x, y);
             rect.x = x-m_robotSurf->w/2;
             rect.y = y-m_robotSurf->h/2;
+            
+            double kx = SCREEN_WIDTH / (m_maxX - m_minX);
+            double ky = SCREEN_HEIGHT / (m_maxY - m_minY);
+            
             SDL_BlitSurface(m_robotSurf, NULL, m_screen, &rect);
             drawLine(m_screen, x, y, x + 3*speed.x*kx, y - 3*speed.y*ky, createColor(0,0,255));
             drawLine(m_screen, x, y, x + 3*acceleration.x*kx, y - 3*acceleration.y*ky, createColor(255,0,0));
@@ -647,6 +741,14 @@ class DeadReckoning
             SDL_Flip(m_screen);
             
             //ROS_INFO("Display updated.");
+        }
+        
+        void convertPosToDisplayCoord(double x, double y, int& x, int& y)
+        {
+            double kx = SCREEN_WIDTH / (m_maxX - m_minX);
+            double ky = SCREEN_HEIGHT / (m_maxY - m_minY);
+            x = (x-m_minX) * kx;
+            y = SCREEN_HEIGHT - (y-m_minY) * ky;
         }
 
     public:
@@ -672,6 +774,12 @@ class DeadReckoning
                 m_position.x = 0.0;
                 m_position.y = 0.0;
                 m_position.z = M_PI/2;
+            }
+            
+            for (int i=0 ; i < 256 ; i++)
+            {
+                m_markersPos[i].x = nan("");
+                m_markersPos[i].y = nan("");
             }
             
             m_startOrientation = m_position.z;
@@ -735,7 +843,7 @@ class DeadReckoning
             
             m_laserScanPub = m_node.advertise<sensor_msgs::LaserScan>("/local_map_scan/scan", 10);
             m_localMapScanSub = m_node.subscribe<nav_msgs::OccupancyGrid>("/local_map_scan/local_map", 10, &DeadReckoning::localMapScanCallback, this);
-            ROS_INFO("Waiting for scan local_map...");
+            ROS_INFO("Waiting for scan local map...");
             while (ros::ok() && (m_localMapScanSub.getNumPublishers() <= 0 || m_laserScanPub.getNumSubscribers() <= 0))
                 rate.sleep();
             checkRosOk_v();
@@ -744,11 +852,15 @@ class DeadReckoning
             m_localMapDepthSub = m_node.subscribe<nav_msgs::OccupancyGrid>("/local_map_depth/local_map", 10, &DeadReckoning::localMapDepthCallback, this);
             if (!m_simulation)
             {
-                ROS_INFO("Waiting for depth local_map...");
+                ROS_INFO("Waiting for depth local map...");
                 while (ros::ok() && (m_localMapDepthSub.getNumPublishers() <= 0 || m_laserDepthPub.getNumSubscribers() <= 0))
                     rate.sleep();
                 checkRosOk_v();
             }
+            
+            ROS_INFO("Creating grids publishers...");
+            m_scanGridPub = m_node.advertise<dead_reckoning::Grid>("/dead_reckoning/scan_grid", 10);
+            m_depthGridPub = m_node.advertise<dead_reckoning::Grid>("/dead_reckoning/depth_grid", 10);
             
             m_time = ros::Time::now();
             ROS_INFO("Ok, let's go.");
@@ -792,7 +904,10 @@ const int DeadReckoning::SCREEN_WIDTH = 600;
 const std::string DeadReckoning::LOCALMAP_SCAN_TRANSFORM_NAME = "localmap_pos_scan";
 const std::string DeadReckoning::LOCALMAP_DEPTH_TRANSFORM_NAME = "localmap_pos_depth";
 const std::string DeadReckoning::ROBOTPOS_TRANSFORM_NAME = "deadreckoning_robotpos";
-
+const std::string DeadReckoning::MARKERPOS_TRANSFORM_NAME = "deadreckoning_markerpos"
+const double DeadReckoning::MARKER_SIZE = 0.175;
+const double DeadReckoning::MARKER_REF_DIST = 0.20;
+        
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "deadreckoning");

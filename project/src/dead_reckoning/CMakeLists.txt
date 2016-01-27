@@ -9,6 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rostime
   tf
+  message_generation
+  std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -45,11 +47,10 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  Grid.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -66,10 +67,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs  # Or other packages containing msgs
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -83,7 +84,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES dead_reckoning
-#  CATKIN_DEPENDS rosconsole roscpp rostime
+ CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
 
@@ -105,6 +106,7 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(deadreckoning src/deadreckoning.cpp)
+add_dependencies(deadreckoning deadreckoning_generate_messages_cpp)
 add_executable(sensordisplay src/sensordisplay.cpp)
 
 ## Add cmake target dependencies of the executable/library
