@@ -124,7 +124,7 @@ catkin_package(
 # add_dependencies(super_mario ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
- add_executable(super_mario src/super_mario.cpp)
+ add_executable(super_mario src/super_mario.cpp src/run_mario.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above

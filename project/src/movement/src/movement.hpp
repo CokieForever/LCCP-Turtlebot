@@ -4,7 +4,6 @@
 #include "kobuki_msgs/BumperEvent.h"
 #include "tf/transform_listener.h"
 #include "sensor_msgs/Image.h"
-#include "std_msgs/Bool.h"
 class Mover
 {
 public://Tunable parameters
@@ -20,31 +19,30 @@ public://Tunable parameters
 
 private:
 
-	//Declare NodeHandler
-	ros::NodeHandle	node;
+    //Declare NodeHandler
+    ros::NodeHandle	node;
 
-	/*Declare Publisher
-	 * commandPub
-	 * targetReachedRequest
-	 * */
+    /*Declare Publisher
+     * commandPub
+     * targetReachedRequest
+     * */
 
-    ros::Publisher marioPub;
-	ros::Publisher commandPub;	//	Publisher to the robot's velocity command topic
-	ros::Publisher targetReachedRequest; // Publishes a "true" state
+    ros::Publisher commandPub;	//	Publisher to the robot's velocity command topic
+    ros::Publisher targetReachedRequest; // Publishes a "true" state
 
-	/*Declare Subscriber
-	 * laserSub
-	 * bumperSub
-	 * imageSub
-	 * getLocationSub
-	 * targetFinished
-	 * */
-	ros::Subscriber	laserSub;	// Subscriber to the robot's laser scan topic
-	//ros::Subscriber markerId;   // Subscriber to the detect_markers topic including the founded aruco-markers
-	ros::Subscriber bumperSub;     // Subscriber to the robot's bumber event topic
-	//ros::Subscriber imageSub;
-	ros::Subscriber getLocationSub;
-	ros::Subscriber targetFinishedSub;
+    /*Declare Subscriber
+     * laserSub
+     * bumperSub
+     * imageSub
+     * getLocationSub
+     * targetFinished
+     * */
+    ros::Subscriber	laserSub;	// Subscriber to the robot's laser scan topic
+    //ros::Subscriber markerId;   // Subscriber to the detect_markers topic including the founded aruco-markers
+    ros::Subscriber bumperSub;     // Subscriber to the robot's bumber event topic
+    //ros::Subscriber imageSub;
+    ros::Subscriber getLocationSub;
+    ros::Subscriber targetFinishedSub;
 
     int m_searchMarker;
     float m_distanceToMarker;
@@ -54,14 +52,14 @@ private:
     bool m_gotTarget;
     geometry_msgs::Vector3Stamped m_target;
     int  m_nextId;
-	void moveRandomly();
+    void moveRandomly();
 
-	void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan);
-	void bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg);
-	//void rgbCallback(const sensor_msgs::ImageConstPtr &msg);
+    void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan);
+    void bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg);
+    //void rgbCallback(const sensor_msgs::ImageConstPtr &msg);
     void approachMarker(int param_marker_id);
     void getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &marker_msg);
-	void targetFinishedCallback(const std_msgs::EmptyConstPtr empty);
-	void driveForwardOdom(double distance);
-	void rotateOdom(double angle);
+    void targetFinishedCallback(const std_msgs::EmptyConstPtr empty);
+    void driveForwardOdom(double distance);
+    void rotateOdom(double angle);
 };
