@@ -1,6 +1,6 @@
 #ifndef DETECTMARKER_H
 #define DETECTMARKER_H
-
+#include <geometry_msgs/Twist.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include "aruco/aruco.h"
@@ -11,7 +11,7 @@ class DetectMarker
     public:
         DetectMarker(ros::NodeHandle& nodeHandle);
         void Detect();
-
+	bool rotation_speed;
     private:
         struct Point
         {
@@ -22,8 +22,9 @@ class DetectMarker
         
         ros::NodeHandle& m_nodeHandle;
         ros::Subscriber m_cameraSub;
+	ros::Subscriber	m_velocitySub;
         ros::Publisher m_markersPub;
-
+	void velocityCallback (const geometry_msgs::Twist::ConstPtr& msg);
         void cameraSubCallback(const sensor_msgs::Image::ConstPtr& msg);
         bool ComputeLinesIntersection(Point linePoints1[2], Point linePoints2[2], Point *isectPoint);
         bool ComputeQuadrilateralCenter(Point points[4], Point *centerPoint);
