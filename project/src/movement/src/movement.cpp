@@ -36,7 +36,7 @@ void Mover::driveForwardOdom(double distance)
 
     //the command will be to go forward at 0.2 m/s
     base_cmd.linear.y = base_cmd.angular.z = 0;
-    base_cmd.linear.x = 0.2;
+    base_cmd.linear.x = 0.4;
 
     ros::Rate rate(10.0);
     double distanceMoved = 0;
@@ -73,12 +73,12 @@ void Mover::rotateOdom(double angle)
     if(angle<0)
     {
         base_cmd.linear.y = base_cmd.linear.x = 0;
-        base_cmd.angular.z = 0.25;
+        base_cmd.angular.z = 0.45;
     }
     else
     {
         base_cmd.linear.y = base_cmd.linear.x = 0;
-        base_cmd.angular.z = -0.25;
+        base_cmd.angular.z = -0.45;
     }
 
     bool done = false;
@@ -221,7 +221,11 @@ void Mover::approachMarker(int param_marker_id)
     bool b_invalid_object = false;
 
     vel_msg.angular.z = m_angularVelocity;
-    vel_msg.linear.x = 0.25;
+    if (m_distanceToMarker > 1.5)
+        vel_msg.linear.x = 0.5;
+    else
+        vel_msg.linear.x = 0.3*m_distanceToMarker;
+
     commandPub.publish(vel_msg);
 
     if (f_distance_old != m_distanceToMarker)
@@ -246,11 +250,12 @@ void Mover::approachMarker(int param_marker_id)
       {
         if (m_searchMarker == 7)
         {
+            m_finishedMarkerSearch = true;
             ROS_INFO("Reached all targets!!!");
             vel_msg.angular.z = 0;
             vel_msg.linear.x = 0;
             commandPub.publish(vel_msg);
-            rotateOdom(358);
+            rotateOdom(180);
             driveForwardOdom(0.75);
         }
         ROS_INFO("Target Reached!!! The Marker is %d", m_searchMarker++);
@@ -325,7 +330,7 @@ void Mover::targetFinishedCallback(const std_msgs::EmptyConstPtr empty)
 }
 void Mover::moveRandomly()
 {
-    srand (time(NULL));
+    srand(time(NULL));
     double randDist = 1.0*((double) rand() / (RAND_MAX));
     double randAngle = 90.0*((double) rand() / (RAND_MAX));
     // ROS_INFO("Random Angle = %f", randAngle);
@@ -349,6 +354,11 @@ void Mover::startMoving()
         else
         {
          //   driveForwardOdom(0.2);
+            if (m_finishedMarkerSearch)
+            {
+                ROS_INFO("Done!");
+                break;
+            }
         }
         ros::spinOnce();
         rate.sleep();

@@ -44,6 +44,7 @@ private:
     ros::Subscriber getLocationSub;
     ros::Subscriber targetFinishedSub;
 
+    bool m_finishedMarkerSearch = false;
     int m_searchMarker;
     float m_distanceToMarker;
     float m_angularVelocity;
