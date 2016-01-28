@@ -94,8 +94,10 @@ int main(int argc, char **argv)
 	ros::init(argc, argv, "imagebroadcast");
 	ROS_INFO("Initialized ROS.");
 
-	ros::NodeHandle nodeHandle;
-	MyLittleImageBroadcaster imageBroadcaster(nodeHandle, argc > 1 ? argv[1] : "");
+	ros::NodeHandle nodeHandle("~");
+    std::string videoFilePath = "";
+    nodeHandle.getParam("videofile_path", videoFilePath);
+	MyLittleImageBroadcaster imageBroadcaster(nodeHandle, videoFilePath);
 	if (!imageBroadcaster.isOK())
 		return -1;
 	imageBroadcaster.broadcast();
