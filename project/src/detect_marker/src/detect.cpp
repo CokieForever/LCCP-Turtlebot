@@ -8,5 +8,5 @@ int main( int argc, char** argv )
     ROS_INFO("Initialized ROS.");
 
     DetectMarker dm(nodeHandle);
-    dm.Detect();
+    dm.detect();
 }

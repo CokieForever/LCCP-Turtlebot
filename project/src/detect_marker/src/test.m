@@ -22,7 +22,7 @@ imshow(restored);
 title('Restored Image');
 
 restored = restored >= 0.7;
-restored = imopen(restored, ones(1,16)) | imopen(restored, ones(16,1));
+%restored = imopen(restored, ones(1,16)) | imopen(restored, ones(16,1));
 
 figure;
 imshow(blurred);

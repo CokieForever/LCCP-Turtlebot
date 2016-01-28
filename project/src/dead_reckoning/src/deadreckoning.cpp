@@ -12,6 +12,7 @@
 #include "dead_reckoning/Grid.h"
 #include "detect_marker/MarkerInfo.h"
 #include "detect_marker/MarkersInfos.h"
+#include "sdl_gfx/SDL_rotozoom.h"
 
 #include "../../utilities.h"
 
@@ -761,10 +762,13 @@ class DeadReckoning
             }
             
             convertPosToDisplayCoord(m_position.x, m_position.y, x, y);
-            rect.x = x-m_robotSurf->w/2;
-            rect.y = y-m_robotSurf->h/2;
             
-            SDL_BlitSurface(m_robotSurf, NULL, m_screen, &rect);
+            SDL_Surface *robotSurf = rotozoomSurface(m_robotSurf, m_position.z*180/M_PI, 1.0, 1);
+            rect.x = x-robotSurf->w/2;
+            rect.y = y-robotSurf->h/2;
+            SDL_BlitSurface(robotSurf, NULL, m_screen, &rect);
+            SDL_FreeSurface(robotSurf);
+            
             drawLine(m_screen, x, y, x + 3*speed.x*kx, y - 3*speed.y*ky, createColor(0,0,255));
             drawLine(m_screen, x, y, x + 3*acceleration.x*kx, y - 3*acceleration.y*ky, createColor(255,0,0));
             drawLine(m_screen, x, y, x+30*cos(m_position.z), y-30*sin(m_position.z), createColor(0,0,0));
@@ -885,6 +889,12 @@ class DeadReckoning
                     rate.sleep();
                 checkRosOk_v();
             }
+            
+            m_markersSub = m_node.subscribe<detect_marker::MarkersInfos>("/markerinfo", 10, &DeadReckoning::markersCallback, this);
+            ROS_INFO("Waiting for marker infos...");
+            while (ros::ok() && m_markersSub.getNumPublishers() <= 0)
+                rate.sleep();
+            checkRosOk_v();
             
             ROS_INFO("Creating grids publishers...");
             m_scanGridPub = m_node.advertise<dead_reckoning::Grid>("/dead_reckoning/scan_grid", 10);

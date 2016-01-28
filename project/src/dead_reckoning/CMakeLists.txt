@@ -105,7 +105,7 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(deadreckoning src/deadreckoning.cpp)
+add_executable(deadreckoning src/deadreckoning.cpp src/sdl_gfx/SDL_rotozoom.c)
 add_dependencies(deadreckoning deadreckoning_generate_messages_cpp)
 add_executable(sensordisplay src/sensordisplay.cpp)
 
