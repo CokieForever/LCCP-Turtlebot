@@ -118,6 +118,7 @@ target_link_libraries(deadreckoning
   ${catkin_LIBRARIES}
   ${roscpp_LIBRARIES}
   SDL
+  SDL_image
 )
 target_link_libraries(sensordisplay
   ${catkin_LIBRARIES}

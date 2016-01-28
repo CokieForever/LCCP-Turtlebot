@@ -3,6 +3,7 @@
 #include <sensor_msgs/LaserScan.h>
 #include <complex>
 #include <SDL/SDL.h>
+#include <SDL/SDL_image.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
 #include <sensor_msgs/Imu.h>
@@ -304,13 +305,19 @@ class Grid
         double* getAll(int* width=NULL, int *height=NULL, double *scale=NULL) const
         {
             double *data = new double[m_width*m_height];
-            //TODO check if data != NULL
+            if (data == NULL)
+            {
+                ROS_ERROR("Unable to create double array (%dx%d)", m_width, m_height);
+                return NULL;
+            }
+            
             for (int x=0 ; x < m_width ; x++)
             {
                 int k = x * m_height;
                 for (int y=0 ; y < m_height ; y++)
                 {
-                    data[k+y] = m_data[k+y]->p;
+                    ProbabilisticPoint *pt = m_data[k+y];
+                    data[k+y] = pt != NULL ? pt->p : -1;
                 }
             }
             if (width != NULL)
@@ -367,7 +374,7 @@ class DeadReckoning
         static const std::string LOCALMAP_SCAN_TRANSFORM_NAME;
         static const std::string LOCALMAP_DEPTH_TRANSFORM_NAME;
         static const std::string ROBOTPOS_TRANSFORM_NAME;
-        static const std::string MARKERPOS_TRANSFORM_NAME
+        static const std::string MARKERPOS_TRANSFORM_NAME;
         static const double MARKER_SIZE;
         static const double MARKER_REF_DIST;
         
@@ -391,7 +398,7 @@ class DeadReckoning
         int m_scanCloudPointsStartIdx, m_depthCloudPointsStartIdx;
         Grid m_scanGrid, m_depthGrid;
         SDL_Surface *m_screen;
-        SDL_Surface *m_robotSurf;
+        SDL_Surface *m_robotSurf, *m_markerSurf;
         SDL_Surface *m_gridSurf;
         double m_minX, m_maxX, m_minY, m_maxY;
         tf::TransformBroadcaster m_transformBroadcaster;
@@ -405,14 +412,14 @@ class DeadReckoning
         
         void markersCallback(const detect_marker::MarkersInfos::ConstPtr& markersInfos)
         {
-            for (std::vector<MarkerInfo>::const_iterator it = markersInfos->infos.begin() ; it != markersInfos->infos.end() ; it++)
+            for (std::vector<detect_marker::MarkerInfo>::const_iterator it = markersInfos->infos.begin() ; it != markersInfos->infos.end() ; it++)
             {
                 if (it->id < 0 || it->id > 255)
                     continue;
                 double angle = -atan(it->x*MARKER_SIZE / (2*MARKER_REF_DIST));
                 double d = it->d / cos(angle);
                 angle += m_position.z;
-                m_markersPos[it->id].x = d * cosAngle + m_position.x;
+                m_markersPos[it->id].x = d * cos(angle) + m_position.x;
                 m_markersPos[it->id].y = d * sin(angle) + m_position.y;
             }
             publishMarkersTransforms();
@@ -631,10 +638,10 @@ class DeadReckoning
                 
             for (int i=0 ; i < 256 ; i++)
             {
-                if (isnan(m_markerPos[i].x) || isnan(m_markerPos[i].y))
+                if (isnan(m_markersPos[i].x) || isnan(m_markersPos[i].y))
                     continue;
                 snprintf(transformName, 100, "%s_%d", MARKERPOS_TRANSFORM_NAME.c_str(), i);
-                transform.setOrigin( tf::Vector3(m_markerPos[i].x, m_markerPos[i].y, 0.0) );
+                transform.setOrigin( tf::Vector3(m_markersPos[i].x, m_markersPos[i].y, 0.0) );
                 m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", transformName));
             }
         }
@@ -645,6 +652,8 @@ class DeadReckoning
             int width, height;
             double scale;
             double *data = grid.getAll(&width, &height, &scale);
+            if (data == NULL)
+                return;
             gridMsg.data.assign(data, data+width*height);
             gridMsg.width = width;
             gridMsg.height = height;
@@ -660,6 +669,13 @@ class DeadReckoning
                 ROS_ERROR("Unable to initialize the SDL.");
                 return false;
             }
+            
+            int flags = IMG_INIT_PNG;
+            if((IMG_Init(flags) & flags) != flags)
+            {
+                ROS_ERROR("Unable to initialize IMG: %s", IMG_GetError());
+                return false;
+            }
 
             m_screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, 32, SDL_SWSURFACE);
             if (!m_screen)
@@ -668,15 +684,33 @@ class DeadReckoning
                 return false;
             }
             SDL_Flip(m_screen);
+            
+            std::string packagePath = "~";
+            if (!m_node.getParam("package_path", packagePath))
+               ROS_WARN("The package path is not set, it will default to '~'.");
 
-            m_robotSurf = SDL_CreateRGBSurface(SDL_HWSURFACE, 20, 20, 32, 0,0,0,0);
+            m_robotSurf = IMG_Load((packagePath + "/turtlebot_small.png").c_str());
             if (!m_robotSurf)
             {
-                ROS_ERROR("Unable to create the robot bitmap.");
+                ROS_ERROR("Unable to load the robot bitmap (%s).", (packagePath + "/turtlebot_small.png").c_str());
                 return false;
             }
             
-            SDL_FillRect(m_robotSurf, NULL, SDL_MapRGB(m_robotSurf->format, 0,0,0));
+            m_markerSurf = IMG_Load((packagePath + "/target_small.png").c_str());
+            if (!m_markerSurf)
+            {
+                ROS_ERROR("Unable to load the marker bitmap (%s).", (packagePath + "/target_small.png").c_str());
+                return false;
+            }
+            
+            m_gridSurf = SDL_CreateRGBSurface(SDL_HWSURFACE, SCREEN_WIDTH, SCREEN_HEIGHT, 32,0,0,0,0);
+            if (!m_gridSurf)
+            {
+                ROS_ERROR("Unable to create the grid surface.");
+                return false;
+            }
+            SDL_SetColorKey(m_gridSurf, SDL_SRCCOLORKEY, SDL_MapRGB(m_gridSurf->format, 0,0,0));
+            
             return true;
         }
         
@@ -730,9 +764,6 @@ class DeadReckoning
             rect.x = x-m_robotSurf->w/2;
             rect.y = y-m_robotSurf->h/2;
             
-            double kx = SCREEN_WIDTH / (m_maxX - m_minX);
-            double ky = SCREEN_HEIGHT / (m_maxY - m_minY);
-            
             SDL_BlitSurface(m_robotSurf, NULL, m_screen, &rect);
             drawLine(m_screen, x, y, x + 3*speed.x*kx, y - 3*speed.y*ky, createColor(0,0,255));
             drawLine(m_screen, x, y, x + 3*acceleration.x*kx, y - 3*acceleration.y*ky, createColor(255,0,0));
@@ -743,12 +774,12 @@ class DeadReckoning
             //ROS_INFO("Display updated.");
         }
         
-        void convertPosToDisplayCoord(double x, double y, int& x, int& y)
+        void convertPosToDisplayCoord(double fx, double fy, int& x, int& y)
         {
             double kx = SCREEN_WIDTH / (m_maxX - m_minX);
             double ky = SCREEN_HEIGHT / (m_maxY - m_minY);
-            x = (x-m_minX) * kx;
-            y = SCREEN_HEIGHT - (y-m_minY) * ky;
+            x = (fx-m_minX) * kx;
+            y = SCREEN_HEIGHT - (fy-m_minY) * ky;
         }
 
     public:
@@ -759,9 +790,6 @@ class DeadReckoning
             m_minX(minX), m_maxX(maxX), m_minY(minY), m_maxY(maxY)
         {
             initSDL();
-            
-            m_gridSurf = SDL_CreateRGBSurface(SDL_HWSURFACE, SCREEN_WIDTH, SCREEN_HEIGHT, 32,0,0,0,0);
-            SDL_SetColorKey(m_gridSurf, SDL_SRCCOLORKEY, SDL_MapRGB(m_gridSurf->format, 0,0,0));
             
             if (m_simulation)
             {
@@ -878,6 +906,10 @@ class DeadReckoning
                 delete m_depthCloudPoints;
             if (m_gridSurf != NULL)
                 SDL_FreeSurface(m_gridSurf);
+            if (m_markerSurf != NULL)
+                SDL_FreeSurface(m_markerSurf);
+            IMG_Quit();
+            SDL_Quit();
         }
 
         void reckon()
@@ -904,7 +936,7 @@ const int DeadReckoning::SCREEN_WIDTH = 600;
 const std::string DeadReckoning::LOCALMAP_SCAN_TRANSFORM_NAME = "localmap_pos_scan";
 const std::string DeadReckoning::LOCALMAP_DEPTH_TRANSFORM_NAME = "localmap_pos_depth";
 const std::string DeadReckoning::ROBOTPOS_TRANSFORM_NAME = "deadreckoning_robotpos";
-const std::string DeadReckoning::MARKERPOS_TRANSFORM_NAME = "deadreckoning_markerpos"
+const std::string DeadReckoning::MARKERPOS_TRANSFORM_NAME = "deadreckoning_markerpos";
 const double DeadReckoning::MARKER_SIZE = 0.175;
 const double DeadReckoning::MARKER_REF_DIST = 0.20;
         
