@@ -224,6 +224,16 @@ class Grid
         {
             return m_precision;
         }
+        
+        double minX() const
+        {
+            return m_minX;
+        }
+        
+        double minY() const
+        {
+            return m_minY;
+        }
 
         bool addPoint(double x, double y, ros::Time t, double p)
         {
@@ -659,6 +669,8 @@ class DeadReckoning
             gridMsg.width = width;
             gridMsg.height = height;
             gridMsg.scale = scale;
+            gridMsg.x = grid.minX();
+            gridMsg.y = grid.minY();
             pub.publish(gridMsg);
             delete data;
         }
