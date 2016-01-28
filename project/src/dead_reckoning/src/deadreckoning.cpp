@@ -378,16 +378,21 @@ class DeadReckoning
         static const int NB_CLOUDPOINTS;
         static const double MAX_RANGE;
         static const double MIN_PROXIMITY_RANGE;
-        static const double MAX_LINEARSPEED;
-        static const double MAX_ANGULARSPEED;
         static const int SCREEN_HEIGHT;
         static const int SCREEN_WIDTH;
         static const std::string LOCALMAP_SCAN_TRANSFORM_NAME;
         static const std::string LOCALMAP_DEPTH_TRANSFORM_NAME;
         static const std::string ROBOTPOS_TRANSFORM_NAME;
+        static const std::string SCANGRIDPOS_TRANSFORM_NAME;
+        static const std::string DEPTHGRIDPOS_TRANSFORM_NAME;
         static const std::string MARKERPOS_TRANSFORM_NAME;
         static const double MARKER_SIZE;
         static const double MARKER_REF_DIST;
+        
+        static double modAngle(double rad)
+        {
+            return fmod(fmod(rad, 2*M_PI) + 2*M_PI, 2*M_PI);
+        }
         
         ros::NodeHandle& m_node;
         ros::Subscriber m_orderSub;
@@ -414,12 +419,6 @@ class DeadReckoning
         double m_minX, m_maxX, m_minY, m_maxY;
         tf::TransformBroadcaster m_transformBroadcaster;
         Vector m_markersPos[256];
-        
-        
-        static double modAngle(double rad)
-        {
-            return fmod(fmod(rad, 2*M_PI) + 2*M_PI, 2*M_PI);
-        }
         
         void markersCallback(const detect_marker::MarkersInfos::ConstPtr& markersInfos)
         {
@@ -636,6 +635,19 @@ class DeadReckoning
             q.setRPY(0, 0, m_position.z);
             transform.setRotation(q);
             m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", ROBOTPOS_TRANSFORM_NAME));
+            
+            transform.setOrigin( tf::Vector3(m_scanGrid.minX(), m_scanGrid.minY(), 0.0) );
+            q.setRPY(0, 0, 0);
+            transform.setRotation(q);
+            m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", SCANGRIDPOS_TRANSFORM_NAME));
+            
+            if (!m_simulation)
+            {
+                transform.setOrigin( tf::Vector3(m_depthGrid.minX(), m_depthGrid.minY(), 0.0) );
+                q.setRPY(0, 0, 0);
+                transform.setRotation(q);
+                m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", DEPTHGRIDPOS_TRANSFORM_NAME));
+            }
         }
         
         void publishMarkersTransforms()
@@ -950,14 +962,14 @@ class DeadReckoning
 const double DeadReckoning::ANGLE_PRECISION = 0.1; //deg
 const int DeadReckoning::NB_CLOUDPOINTS = 1000;
 const double DeadReckoning::MIN_PROXIMITY_RANGE = 0.5; // Should be smaller than sensor_msgs::LaserScan::range_max
-const double DeadReckoning::MAX_LINEARSPEED = 0.5;
-const double DeadReckoning::MAX_ANGULARSPEED = M_PI/4;
 const double DeadReckoning::MAX_RANGE = 15.0;
 const int DeadReckoning::SCREEN_HEIGHT = 600;
 const int DeadReckoning::SCREEN_WIDTH = 600;
 const std::string DeadReckoning::LOCALMAP_SCAN_TRANSFORM_NAME = "localmap_pos_scan";
 const std::string DeadReckoning::LOCALMAP_DEPTH_TRANSFORM_NAME = "localmap_pos_depth";
 const std::string DeadReckoning::ROBOTPOS_TRANSFORM_NAME = "deadreckoning_robotpos";
+const std::string DeadReckoning::SCANGRIDPOS_TRANSFORM_NAME = "deadreckoning_scangridpos";
+const std::string DeadReckoning::DEPTHGRIDPOS_TRANSFORM_NAME = "deadreckoning_depthgridpos";
 const std::string DeadReckoning::MARKERPOS_TRANSFORM_NAME = "deadreckoning_markerpos";
 const double DeadReckoning::MARKER_SIZE = 0.175;
 const double DeadReckoning::MARKER_REF_DIST = 0.20;
