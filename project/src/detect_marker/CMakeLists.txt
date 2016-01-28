@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   cv_bridge
   sensor_msgs
+  geometry_msgs
   message_generation
 )
 

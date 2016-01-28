@@ -3,6 +3,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/core/core.hpp"
 #include "detectmarker.h"
+#include <geometry_msgs/Twist.h>
 #include "detect_marker/MarkerInfo.h"
 #include "detect_marker/MarkersInfos.h"
 
@@ -10,7 +11,9 @@ DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
 {
     ROS_INFO("Subscribing to camera image topic...");
     m_cameraSub = m_nodeHandle.subscribe("/camera/rgb/image_raw", 1, &DetectMarker::cameraSubCallback, this);
+    m_velocitySub = m_nodeHandle.subscribe("/mobile_base/commands/velocity", 1, &DetectMarker::velocityCallback, this);
     ros::Rate loopRate(10);
+    rotation_speed=false;
     while (ros::ok() && m_cameraSub.getNumPublishers() <= 0)
         loopRate.sleep();
 
@@ -19,12 +22,28 @@ DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     ROS_INFO("Done, everything's ready.");
 }
 
+
+
+void DetectMarker::velocityCallback (const geometry_msgs::Twist::ConstPtr& msg)
+{
+	if (msg->angular.z !=0)
+        {
+	 rotation_speed=false;
+        }
+	else
+	{
+	  rotation_speed=true;
+	}
+	
+}
+
+
 void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
 {
     ROS_INFO("Received image from camera.");
 
     cv::Mat img;
-    cv::Mat deblurred_img;
+    cv::Mat process_img;
     try
     {
         cv_bridge::CvImageConstPtr imgPtr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
@@ -43,12 +62,20 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     
     aruco::MarkerDetector detector;
     std::vector<aruco::Marker> markers;
-    
-    deblurred_img=deblurring(img).clone(); //////////////////////
-    if(deblurred_img.empty())
+   
+    if (rotation_speed)
+    {
+	process_img=deblurring(img).clone();
+    }
+    else
+    {
+	process_img=img.clone();
+    }
+
+    if(process_img.empty())
     {    ROS_WARN ("Could not create the black and white image") ;
     }
-    detector.detect(deblurred_img, markers);
+    detector.detect(process_img, markers);
     int nbMarkers = markers.size();
     ROS_INFO("Amount of markers: %d", nbMarkers);
     bool zoomed_pic=false;
@@ -58,11 +85,11 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     if (nbMarkers==0)
     {
 
-          int width = deblurred_img.cols;
-            int height = deblurred_img.rows;
-            int channels = deblurred_img.channels();
+            int width = process_img.cols;
+            int height = process_img.rows;
+            int channels = process_img.channels();
             ROS_INFO("deblurred Image size: %dx%dx%d", width, height, channels);
-            if (deblurred_img.cols <= 0 || deblurred_img.rows <= 0)
+            if (process_img.cols <= 0 || process_img.rows <= 0)
         {
             ROS_WARN("Received emtpy / unconventional image.");
             return;
@@ -73,19 +100,19 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
         cv::Mat smallImages;
 
 
-        for  ( int y =  0 ; y <deblurred_img.rows-smallSize.height+2 ; y += height/2 )
+        for  ( int y =  0 ; y <process_img.rows-smallSize.height+2 ; y += height/2 )
         {
           k=0;
-          for  ( int x =  0 ; x <deblurred_img.cols-smallSize.width+2 ; x +=width/2 )
+          for  ( int x =  0 ; x <process_img.cols-smallSize.width+2 ; x +=width/2 )
           {
-        ROS_INFO("no markers detected.Zoom in is the next step");
+            ROS_INFO("no markers detected.Zoom in is the next step");
             zoomed_pic= true;
             cv::Rect rect = cv::Rect(x, y, smallSize.width, smallSize.height);
             cout << x << " " << y << " " << smallSize.width << " " << smallSize.height << endl;
             ROS_INFO("Image size: %dx%dx%dx%d", x, y, smallSize.width, smallSize.height);
-            smallImages.push_back(cv::Mat(deblurred_img, rect));
-            resize(cv::Mat(deblurred_img, rect), dst, deblurred_img.size(), 0, 0, CV_INTER_LINEAR);
-        cv::imshow("ZOOOOOOOOm", dst);
+            smallImages.push_back(cv::Mat(process_img, rect));
+            resize(cv::Mat(process_img, rect), dst, process_img.size(), 0, 0, CV_INTER_LINEAR);
+            cv::imshow("ZOOOOOOOOm", dst);
             detector.detect(dst,markers);
             cv::Mat frame = dst;
             drawingMarkers(frame, markers, k, l, zoomed_pic);
@@ -98,7 +125,7 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     {
       k=0;
       l=0;
-      cv::Mat frame=deblurred_img;
+      cv::Mat frame=process_img;
       zoomed_pic=false;
       drawingMarkers(frame, markers, k, l, zoomed_pic );
     }
@@ -112,8 +139,8 @@ void DetectMarker::drawingMarkers(cv::Mat frame, std::vector<aruco::Marker> &mar
     int width = frame.cols;
     int height = frame.rows;
     int channels = frame.channels();
-        int coord_division;
-        ROS_INFO("Image size2: %dx%dx%d", width, height, channels);
+    int coord_division;
+    ROS_INFO("Image size2: %dx%dx%d", width, height, channels);
     if (frame.cols <= 0 || frame.rows <= 0)
     {
         ROS_WARN("Received emtpy / unconventional image.");
@@ -245,56 +272,106 @@ void DetectMarker::Detect()
 
 cv::Mat DetectMarker::deblurring(cv::Mat img )
 {
-     cv::Mat im;
-     cv::Mat im_conv_kernel;
-     cv::Mat im_correction;
-     cv::Mat im_clone;
-     cv::Mat im_new_est;
-     cv::Mat dst;
-     cv::Point anchor;
-     double delta;
-     int ddepth;
-     int i;
-     cv::cvtColor(img, im, CV_RGB2GRAY);
+
+   cv::Mat im;
+   cv::cvtColor(img, im, CV_RGB2GRAY);
+   int kernel_size=13;
+   int size_zeros= 6;
+   cv::Mat kernel;
+   cv::Mat Y;
+   cv::Mat kernel1= cv::Mat::zeros(1, size_zeros, CV_64F);
+   cv::Mat kernel2=cv::Mat::ones(1, kernel_size-size_zeros, CV_64F)/(kernel_size-size_zeros);
+   cv::hconcat(kernel1, kernel2, kernel);
+   cv::Mat J1;
+   cv::Mat J2;
+   cv::Mat J3;
+   cv::Mat J4;
+   cv::Mat wI;
+   cv::Mat anEstimate;
+   cv::Mat anEstimate1;
+   cv::Mat Kernel_values= cv::Mat(1, kernel_size-size_zeros, CV_64F);
+   cv::Mat zeros_add= cv::Mat::zeros(1, im.cols-kernel_size+size_zeros, CV_64F);
+   cv::Mat kernel_zeros_concat;
+   cv::Mat H=cv::Mat::zeros(im.rows, im.cols, CV_64F);
+   cv::Mat Hdft, Hdft_conj, Ydft, anEstimate_dft, HYdft, HdftAnEstimdft= cv::Mat(im.rows, im.cols, CV_64FC2);
+   cv::Mat HYidft;
+   cv::Mat lambda2;
+   cv::Mat planes[2];
+   cv::Mat H_anEst_inv;
+   double eps=std::numeric_limits<double>::epsilon();
+   int r;
+   int i;
+   double lambda=0;
+   
+   J4=cv::Mat::zeros(im.rows*im.cols, 2, CV_64F);
+   J3=cv::Mat::zeros(im.rows, im.cols, CV_64F);
+
+   im.convertTo(im, CV_64F, 1.0/255);
+   J1=im.clone();
+   J2=im.clone();
+   wI=im.clone();
+
+   //create an array with all the non-zero values of the kernel in their normal order
+   for (r=0; r<kernel_size-size_zeros; r++)
+   {
+    Kernel_values.at<double>(r)=kernel.at<double>(kernel_size-size_zeros+r-1);
+   }
 
 
-     cv::namedWindow("Image gray", CV_WINDOW_AUTOSIZE );
-     cv::imshow("Image gray", im);
+    //concatenate the non-tero values with the zeros in order to crate a row (1*im.cols)
+    cv::hconcat(Kernel_values, zeros_add, kernel_zeros_concat);
+    //first elements of H have the non-zero values of the kernel. The rest values are zero
+    H.row(0)=H.row(0)+kernel_zeros_concat;
+    //Discrete Fourier Transform
+    cv::dft(H, Hdft, cv::DFT_COMPLEX_OUTPUT);
+   //deblurring through ten iterations
+   //J1 is the original grayscale image, J2 is the result of each iteration, J3 is the result of the previous iteration  
+   for(i=0;i<10;i++)
+  {
+
+     if (i>1)
+    {
+      ROS_INFO("BEFORE");
+      double A=J4.col(0).dot(J4.col(1));
+      double B=J4.col(1).dot(J4.col(1))+eps;
+      lambda=A/B;
+      lambda = max(min(lambda,(double)1),(double)0);
+    }
+
      
-     anchor=cv::Point(-1,-1);
-     delta = 0;
-     ddepth = -1;
-     int borderType=cv::BORDER_DEFAULT;
-     int kernel_size = 13;
-     int kernel_zeros_size= (int)(kernel_size/2); 
+     Y = cv::max(J2 + lambda*(J2 - J3),(double)0);
+     cv::dft(Y, Ydft, cv::DFT_COMPLEX_OUTPUT);
+     //multiplication of Fourier transformations
+     cv::mulSpectrums(Hdft, Ydft, HYdft, 0);
+    //inverse Fourier transformation
+     cv::idft(HYdft, HYidft, cv::DFT_SCALE + cv::DFT_REAL_OUTPUT);
+    //set to eps when zero, to erase problems with the following divisions
+     HYidft.setTo(eps, HYidft==0);
+     cv::divide(wI, HYidft, anEstimate1, 1);
+     anEstimate= anEstimate1+eps;
+     cv::dft(anEstimate, anEstimate_dft, cv::DFT_COMPLEX_OUTPUT);
+     J3=J2.clone();
+     //conj calculation
+     cv::split(Hdft, planes);
+     planes[1]=-planes[1];
+     cv::merge(planes, 2 , Hdft_conj);
+     
+     cv::mulSpectrums(Hdft_conj, anEstimate_dft, HdftAnEstimdft, 0);
+     cv::idft(HdftAnEstimdft, H_anEst_inv, cv::DFT_SCALE + cv::DFT_REAL_OUTPUT);
+     J2=cv::max(Y.mul(H_anEst_inv), 0);;
+     J4.col(0).copyTo(J4.col(1));
+     cv::Mat J2_Y= J2-Y;
+     J2_Y.reshape(0, im.rows*im.cols).copyTo(J4.col(0));
 
-     //cv::Mat kernel_zeros= cv::Mat::zeros(1, kernel_zeros_size, CV_32F );
-     cv::Mat kernel = cv::Mat::ones( 1,kernel_size, CV_32F )/ (float)(kernel_size);
-    // cv::Mat kernel;
-     //cv::hconcat(kernel_zeros, kernel_ones, kernel);
-
-     // fk+1(x,y) = fk(x,y)
-     im_clone= im.clone();
-
-     for(i=0; i < 10; i++) {
-     // Convolve f0(x,y)= g(x,y) with blur kernel
-     // f0(x,y) ** kernel
-     cv::filter2D(im_clone, im_conv_kernel, ddepth, kernel, anchor, delta, borderType );
-
-     // Subtract from blurred image. Error correction = b(x,y) – ik(x,y) ** k(x.y)
-
-     cv::subtract(im, im_conv_kernel, im_correction);
-     // Add ik(x,y) with imCorrection – ik(x,y) + b(x,y) – ik(x,y) ** k(x,y)
-     double lamda=0.1;
-     cv::add(im_clone, lamda*im_correction,im_new_est);
-     im_clone = im_new_est.clone();
-     }
-     cv::imshow("deblurred whole pic" ,im_clone);
-     cv::threshold(im_clone, dst, 100 , 255, cv::THRESH_BINARY);
+  }
+     cv::Mat dst;
+     cv::imshow("Black and white1", J2);
+     J2.convertTo(J2, CV_8U, 255.0);
+     //recreate bit-image according to the threshold, keep black and white values to improve detection 
+     cv::threshold(J2, dst, 170 , 250, cv::THRESH_BINARY);
      cv::imshow("Black and white", dst);
-     return dst;
-
-
+     cv::waitKey(0);
+     return J2;
 }
 
 
