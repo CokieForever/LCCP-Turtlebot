@@ -150,7 +150,8 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
     int minIndex = ceil((MIN_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
     int maxIndex = floor((MAX_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
-    float closestRange = scan->ranges[minIndex];
+    //float closestRange = scan->ranges[minIndex];
+    float closestRange;
     //save distance between robot and marker (which is in the center)
     if(scan->ranges[0]<=10 && scan->ranges[0]!=INFINITY){
         m_distanceToMarker = scan->ranges[0];
@@ -167,15 +168,6 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
     if(closestRange < MIN_PROXIMITY_RANGE_M)
     {
         m_keepMoving=false;
-        /*  //check if you have a target we are heading for
-      if(m_gotTarget==true)
-        {
-          m_gotTarget = false;
-          m_reachedTarget = true;
-          rotateOdom(180);
-          driveForwardOdom(0.75);
-        }
-       else*/
         //rotate only if not approaching target
         ROS_INFO("Obstacle in %f Turn 25 degrees!", closestRange);
         rotateOdom(25.0);
@@ -256,7 +248,6 @@ void Mover::approachMarker(int param_marker_id)
             commandPub.publish(vel_msg);
             rotateOdom(180);
             driveForwardOdom(0.75);
-            m_keepMoving = false;
 
         }
         ROS_INFO("Target Reached!!! The Marker is %d", m_searchMarker++);
@@ -300,13 +291,14 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
         //was if (!m_reachedTarget && f_Xm!=0.0 && m_gotTarget)
         while (m_gotTarget && m_outOfSight)
         {
+            ROS_INFO("TF: SWITCHING TO TF");
             //move to transform approach
             ros::Rate rate(10);
             //TF - decrease distance to target
             tf::StampedTransform transform;
             char goalMarker[100];
             // listen to tf of next marker position
-            snprintf(goalMarker,100, "deadreckoning_markerpos_%d",m_nextId);
+            snprintf(goalMarker,100, "deadreckoning_markerpos_%d",m_searchMarker);
             try{
                 //Listen to transformations: Position of robot and position of marker
                 m_coordinateListener.lookupTransform("deadreckoning_robotpos", goalMarker,
@@ -314,21 +306,33 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
             }
             catch (tf::TransformException &ex) {
                 ROS_ERROR("%s",ex.what());
-
                 ros::Duration(1.0).sleep();
                 continue;
             }
             geometry_msgs::Twist vel_msg;
             // decrease distance between robot and marker, while avoiding obstacles;
-            vel_msg.angular.z = 4.0 * atan2(transform.getOrigin().y(),
-                                            transform.getOrigin().x());
-            vel_msg.linear.x = 0.5 * sqrt(pow(transform.getOrigin().x(), 2) +
-                                          pow(transform.getOrigin().y(), 2));
+            if (m_distanceToMarker <= 1.0)
+            {
+
+                m_gotTarget = false;
+                vel_msg.angular.z = 0;
+                vel_msg.linear.x = 0;
+                //search for next marker
+                m_searchMarker++;
+                ROS_INFO("I'm too close to the marker, search next: %d", m_searchMarker);
+            }
+            else
+            {
+                vel_msg.angular.z = 1.0 * atan2(transform.getOrigin().y(),
+                                                transform.getOrigin().x());
+                vel_msg.linear.x = 0.1 * sqrt(pow(transform.getOrigin().x(), 2) +
+                                              pow(transform.getOrigin().y(), 2));
+            }
             commandPub.publish(vel_msg);
             ros::spinOnce();
             rate.sleep();
         }
-        if (!m_reachedTarget && m_gotTarget && !m_outOfSight)
+        /*if (!m_reachedTarget && m_gotTarget && !m_outOfSight)
         {
             //adjust robot, so the marker actually is in the center
             if (f_Xm < 0)
@@ -352,7 +356,7 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
         else
         {
             m_gotTarget=false;
-        }
+        }*/
     }
     ros::spinOnce();
 }

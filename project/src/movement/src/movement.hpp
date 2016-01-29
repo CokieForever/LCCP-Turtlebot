@@ -9,8 +9,8 @@ class Mover
 public://Tunable parameters
 
   const static double FORWARD_SPEED_MPS = 0.2;
-  const static double MIN_SCAN_ANGLE_RAD = -0.37 + M_PI;
-  const static double MAX_SCAN_ANGLE_RAD = 0.37 + M_PI;
+  const static double MIN_SCAN_ANGLE_RAD = -0.37; //+ M_PI; remove mpi for gazebo
+  const static double MAX_SCAN_ANGLE_RAD = 0.37; //+ M_PI;
   const static float  MIN_PROXIMITY_RANGE_M = 0.65;	//Should be smaller than sensor_msgs::LaserScan::range_max
 
   Mover();
