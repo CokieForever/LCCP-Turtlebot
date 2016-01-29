@@ -224,7 +224,7 @@ void Mover::approachMarker(int param_marker_id)
     commandPub.publish(vel_msg);
     if (f_distance_old != m_distanceToMarker)
     {
-        if ((m_distanceToMarker - f_distance_old) > 0.1)
+        if ((f_distance_old -  m_distanceToMarker ) > 0.1)
         {
             //this is an invalid object!!!
             b_invalid_object = true;
@@ -264,7 +264,7 @@ void Mover::approachMarker(int param_marker_id)
 
 void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &marker_msg)
 {
-    if (marker_msg->infos.size())
+    if (marker_msg->infos.size() || m_gotTarget)
     {
         //ROS_INFO("location callback!");
         //map the coordiante to the center
@@ -289,20 +289,20 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
 
         //ROS_INFO("Location of marker: %f", f_Xm);
         //was if (!m_reachedTarget && f_Xm!=0.0 && m_gotTarget)
-        while (m_gotTarget && m_outOfSight)
+        while (m_gotTarget) //  was && m_outOfSight
         {
             ROS_INFO("TF: SWITCHING TO TF");
             //move to transform approach
             ros::Rate rate(10);
             //TF - decrease distance to target
-            tf::StampedTransform transform;
+            tf::StampedTransform transform_marker;
             char goalMarker[100];
             // listen to tf of next marker position
             snprintf(goalMarker,100, "deadreckoning_markerpos_%d",m_searchMarker);
             try{
                 //Listen to transformations: Position of robot and position of marker
                 m_coordinateListener.lookupTransform("deadreckoning_robotpos", goalMarker,
-                                                     ros::Time(0), transform);
+                                                     ros::Time(0), transform_marker);
             }
             catch (tf::TransformException &ex) {
                 ROS_ERROR("%s",ex.what());
@@ -311,9 +311,10 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
             }
             geometry_msgs::Twist vel_msg;
             // decrease distance between robot and marker, while avoiding obstacles;
-            if (m_distanceToMarker <= 1.0)
+            float f_distance_to_marker = sqrt(pow(transform_marker.getOrigin().x(), 2) +
+                                              pow(transform_marker.getOrigin().y(), 2));
+            if ( (f_distance_to_marker <= 0.5)) //m_distanceToMarker <= 0.7 &&
             {
-
                 m_gotTarget = false;
                 vel_msg.angular.z = 0;
                 vel_msg.linear.x = 0;
@@ -323,16 +324,17 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
             }
             else
             {
-                vel_msg.angular.z = 1.0 * atan2(transform.getOrigin().y(),
-                                                transform.getOrigin().x());
-                vel_msg.linear.x = 0.1 * sqrt(pow(transform.getOrigin().x(), 2) +
-                                              pow(transform.getOrigin().y(), 2));
+                vel_msg.angular.z = 2.0 * atan2(transform_marker.getOrigin().y(),
+                                                transform_marker.getOrigin().x());
+                vel_msg.linear.x = 0.2 * sqrt(pow(transform_marker.getOrigin().x(), 2) +
+                                              pow(transform_marker.getOrigin().y(), 2));
             }
             commandPub.publish(vel_msg);
             ros::spinOnce();
             rate.sleep();
         }
-        /*if (!m_reachedTarget && m_gotTarget && !m_outOfSight)
+        /* Back-up plan
+        if (!m_reachedTarget && m_gotTarget && !m_outOfSight)
         {
             //adjust robot, so the marker actually is in the center
             if (f_Xm < 0)
@@ -370,6 +372,7 @@ void Mover::targetFinishedCallback(const std_msgs::EmptyConstPtr empty)
 }
 void Mover::moveRandomly()
 {
+
     srand(time(NULL));
     double randDist = 1.0*((double) rand() / (RAND_MAX));
     double randAngle = 90.0*((double) rand() / (RAND_MAX));
@@ -377,7 +380,7 @@ void Mover::moveRandomly()
     rotateOdom(randAngle);
     //ROS_INFO("Random Distance = %f", randDist);
     driveForwardOdom(randDist);
-    //ROS_INFO("Found nothing");
+    ROS_INFO("RAndom Walk");
 }
 //Method which will be called from run_stopper.cpp
 void Mover::startMoving()

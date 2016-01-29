@@ -78,7 +78,7 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     
     std::vector<cv::Mat> images;
     images.push_back(img);
-    if (m_isRotating)
+    if (m_isRotating && false)
         images.push_back(deblurring(img));
     
     aruco::MarkerDetector detector;

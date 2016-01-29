@@ -432,7 +432,6 @@ class DeadReckoning
                 m_markersPos[it->id].x = d * cos(angle) + m_position.x;
                 m_markersPos[it->id].y = d * sin(angle) + m_position.y;
             }
-            publishMarkersTransforms();
         }
 
         void IMUCallback(const sensor_msgs::Imu::ConstPtr& imu)
@@ -465,8 +464,6 @@ class DeadReckoning
             m_linearSpeed = order->linear.x;
             m_angularSpeed = order->angular.z;
             m_time = ros::Time::now();
-            
-            publishTransforms();
         }
         
         void localMapScanCallback(const nav_msgs::OccupancyGrid::ConstPtr& occ)
@@ -953,6 +950,8 @@ class DeadReckoning
             while (ros::ok())
             {
                 ros::spinOnce();
+                publishMarkersTransforms();
+                publishTransforms();
                 updateDisplay();
                 rate.sleep();
             }
