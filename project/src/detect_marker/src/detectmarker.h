@@ -11,7 +11,6 @@ class DetectMarker
     public:
         DetectMarker(ros::NodeHandle& nodeHandle);
         void Detect();
-	bool rotation_speed;
     private:
         struct Point
         {
@@ -19,7 +18,7 @@ class DetectMarker
         };
         
         static const double MARKER_REF_DIST = 0.20;
-        
+        bool rotation_speed;
         ros::NodeHandle& m_nodeHandle;
         ros::Subscriber m_cameraSub;
 	ros::Subscriber	m_velocitySub;
