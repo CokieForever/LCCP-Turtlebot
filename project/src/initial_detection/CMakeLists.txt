@@ -5,11 +5,12 @@ project(initial_detection)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  aruco
   rosconsole
   roscpp
-detect_marker
-geometry_msgs
-sensor_msgs
+  detect_marker
+  geometry_msgs
+  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -140,6 +141,7 @@ target_link_libraries(initial_detection  ${catkin_LIBRARIES})
 # target_link_libraries(initial_detection_node
 #   ${catkin_LIBRARIES}
 # )
+add_dependencies(initial_detection detect_marker_generate_messages_cpp)
 
 #############
 ## Install ##

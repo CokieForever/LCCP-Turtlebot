@@ -1,0 +1,14 @@
+<launch>   
+    <include file="$(find turtlebot_gazebo)/launch/turtlebot_world.launch"/>
+    <include file="$(find turtlebot_teleop)/launch/keyboard_teleop.launch"/>
+    <node name="local_map_scan" pkg="local_map" type="local_map">
+        <param name="map_resolution" type="double" value="0.05" />
+        <param name="map_width" type="double" value="200" />
+        <param name="map_height" type="double" value="200" />
+    </node>
+	<node name="deadreckoning" pkg="dead_reckoning" type="deadreckoning" output="screen">
+        <param name="mode" type="string" value="simulation" />
+        <param name="package_path" type="string" value="$(find dead_reckoning)" />
+    </node>
+    <node name="detectmarker" pkg="detect_marker" type="detect_marker" output="screen" />
+</launch>

@@ -1,0 +1,6 @@
+<launch>
+    <node type="detect_marker" name="detect_marker" pkg="detect_marker" output="screen" />
+    <node type="imagebroadcast" name="imagebroadcast" pkg="detect_marker" output="screen">
+        <param name="videofile_path" value="$(find detect_marker)/record/test.png" type="string" />
+    </node>
+</launch>
