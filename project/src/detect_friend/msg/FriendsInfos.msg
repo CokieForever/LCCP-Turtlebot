@@ -1,1 +1,2 @@
-int8 id 
+Friend_id[] infos
+  

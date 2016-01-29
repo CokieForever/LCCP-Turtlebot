@@ -14,15 +14,7 @@ class DetectFriend
     public:
         DetectFriend(ros::NodeHandle& nodeHandle);
         void Identification();
-        struct ORBMatchResult
-        {
-            cv::Point2f corners[4];
-            double score;
-            cv::Mat colorDiffImg;
-            
-        };
-        ORBMatchResult match(const cv::Mat& img, const cv::Mat& templ) const;
-        cv::Mat drawResult(const cv::Mat& img, const ORBMatchResult& result) const;
+        const static double min_score	=0.7;
     private:
         ros::NodeHandle& m_nodeHandle;
         ros::Subscriber m_cameraSub;
@@ -30,9 +22,6 @@ class DetectFriend
         Mat star_image;
         Mat mushroom_image;
         Mat coin_image;
-        static cv::Mat binarizeImageKMeans(const cv::Mat& input);
-        static cv::Mat removeIsolatedPixels(const cv::Mat& binInput, int nbMinNeighbours=1);
         void cameraSubCallback(const sensor_msgs::Image::ConstPtr& msg);
-        void friends_inscene(const Mat &img_scene, const Mat &img_object, int j);
         
 };

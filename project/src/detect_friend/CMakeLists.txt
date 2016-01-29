@@ -131,7 +131,7 @@ include_directories(
 # add_library(detect_friend
 #   src/${PROJECT_NAME}/detect_friend.cpp
 # )
-add_executable(detect_friend src/detect_friend.cpp src/detect_main.cpp)
+add_executable(detect_friend src/detect_friend.cpp src/detect_main.cpp src/orbdetector.cpp)
 add_dependencies(detect_friend detect_friend_generate_messages_cpp)
 target_link_libraries(detect_friend ${catkin_LIBRARIES} ${OpenCV_LIBS})
 ## Add cmake target dependencies of the library
