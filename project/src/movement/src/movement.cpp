@@ -38,7 +38,7 @@ void Mover::driveForwardOdom(double distance)
 
     //the command will be to go forward at 0.2 m/s
     base_cmd.linear.y = base_cmd.angular.z = 0;
-    base_cmd.linear.x = 0.4;
+    base_cmd.linear.x = 0.25;
 
     ros::Rate rate(10.0);
     double distanceMoved = 0;
@@ -75,12 +75,12 @@ void Mover::rotateOdom(double angle)
     if(angle<0)
     {
         base_cmd.linear.y = base_cmd.linear.x = 0;
-        base_cmd.angular.z = 0.45;
+        base_cmd.angular.z = 0.25;
     }
     else
     {
         base_cmd.linear.y = base_cmd.linear.x = 0;
-        base_cmd.angular.z = -0.45;
+        base_cmd.angular.z = -0.25;
     }
 
     bool done = false;
@@ -256,6 +256,8 @@ void Mover::approachMarker(int param_marker_id)
             commandPub.publish(vel_msg);
             rotateOdom(180);
             driveForwardOdom(0.75);
+            m_keepMoving = false;
+
         }
         ROS_INFO("Target Reached!!! The Marker is %d", m_searchMarker++);
         ROS_INFO("Searching next target: %d , distance is %f", m_searchMarker, m_distanceToMarker);
@@ -302,8 +304,12 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
             ros::Rate rate(10);
             //TF - decrease distance to target
             tf::StampedTransform transform;
+            char goalMarker[100];
+            // listen to tf of next marker position
+            snprintf(goalMarker,100, "deadreckoning_markerpos_%d",m_nextId);
             try{
-                m_coordinateListener.lookupTransform("turtlebot", "deadreckoning_robotpos",
+                //Listen to transformations: Position of robot and position of marker
+                m_coordinateListener.lookupTransform("deadreckoning_robotpos", goalMarker,
                                                      ros::Time(0), transform);
             }
             catch (tf::TransformException &ex) {
@@ -313,6 +319,7 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
                 continue;
             }
             geometry_msgs::Twist vel_msg;
+            // decrease distance between robot and marker, while avoiding obstacles;
             vel_msg.angular.z = 4.0 * atan2(transform.getOrigin().y(),
                                             transform.getOrigin().x());
             vel_msg.linear.x = 0.5 * sqrt(pow(transform.getOrigin().x(), 2) +
