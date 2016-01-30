@@ -13,6 +13,7 @@
 #include "detect_marker/MarkerInfo.h"
 #include "detect_marker/MarkersInfos.h"
 #include "sdl_gfx/SDL_rotozoom.h"
+#include "nav_msgs/Odometry.h"
 
 #include "../../utilities.h"
 
@@ -371,6 +372,13 @@ class Grid
         }
 };
 
+
+struct StampedPos
+{
+    double x, y, z;
+    ros::Time t;
+};
+
 class DeadReckoning
 {
     private:
@@ -388,6 +396,7 @@ class DeadReckoning
         static const std::string MARKERPOS_TRANSFORM_NAME;
         static const double MARKER_SIZE;
         static const double MARKER_REF_DIST;
+        static const int SIZE_POSITIONS_HIST;
         
         static double modAngle(double rad)
         {
@@ -396,6 +405,7 @@ class DeadReckoning
         
         ros::NodeHandle& m_node;
         ros::Subscriber m_orderSub;
+        ros::Subscriber m_odomSub;
         ros::Subscriber m_laserSub;
         ros::Subscriber m_depthSub;
         ros::Subscriber m_imuSub;
@@ -406,8 +416,10 @@ class DeadReckoning
         double *m_scanRanges, *m_depthRanges;
         bool m_simulation;
         ros::Time m_time;
-        geometry_msgs::Vector3 m_position;
-        double m_startOrientation;
+        StampedPos m_position;
+        StampedPos *m_positionsHist;
+        int m_positionsHistIdx;
+        double m_offsetX, m_offsetY, m_offsetZ;
         double m_linearSpeed;
         double m_angularSpeed;
         Vector *m_scanCloudPoints, *m_depthCloudPoints;
@@ -418,7 +430,27 @@ class DeadReckoning
         SDL_Surface *m_gridSurf;
         double m_minX, m_maxX, m_minY, m_maxY;
         tf::TransformBroadcaster m_transformBroadcaster;
-        Vector m_markersPos[256];
+        StampedPos m_markersPos[256];
+        
+        StampedPos getPosForTime(const ros::Time& time)
+        {
+            if (m_simulation)
+                return m_position;
+            
+            StampedPos prevPos = m_positionsHist[m_positionsHistIdx];
+            if (isnan(prevPos.x) || isnan(prevPos.y) || isnan(prevPos.z) || prevPos.t >= time)
+                return prevPos;
+            
+            for (int i=1 ; i < SIZE_POSITIONS_HIST ; i++)
+            {
+                StampedPos pos = m_positionsHist[(m_positionsHistIdx+i) % SIZE_POSITIONS_HIST];
+                if (!isnan(pos.x) && !isnan(pos.y) && !isnan(pos.z) && pos.t >= time)
+                    return time-prevPos.t >= pos.t-time ? pos : prevPos;
+                prevPos = pos;
+            }
+            
+            return prevPos;
+        }
         
         void markersCallback(const detect_marker::MarkersInfos::ConstPtr& markersInfos)
         {
@@ -426,47 +458,72 @@ class DeadReckoning
             {
                 if (it->id < 0 || it->id > 255)
                     continue;
-                double angle = -atan(it->x*MARKER_SIZE / (2*MARKER_REF_DIST));
-                double d = it->d / cos(angle);
-                angle += m_position.z;
-                m_markersPos[it->id].x = d * cos(angle) + m_position.x;
-                m_markersPos[it->id].y = d * sin(angle) + m_position.y;
+                double angle = -atan(it->dx / it->dz);
+                double d = hypot(it->dx, it->dz);
+                
+                StampedPos pos = getPosForTime(markersInfos->time);
+                angle += pos.z;
+                m_markersPos[it->id].x = d * cos(angle) + pos.x;
+                m_markersPos[it->id].y = d * sin(angle) + pos.y;
+                m_markersPos[it->id].t = markersInfos->time;
             }
-            publishMarkersTransforms();
         }
 
         void IMUCallback(const sensor_msgs::Imu::ConstPtr& imu)
         {
             if (!m_simulation)
-                m_position.z = modAngle(2*asin(imu->orientation.z));
+            {
+                double angle = 2*asin(imu->orientation.z);
+                if (isnan(m_offsetZ))
+                    m_offsetZ = m_position.z - angle;
+                m_position.z = modAngle(angle + m_offsetZ);
+            }
+        }
+        
+        void odomCallback(const nav_msgs::Odometry::ConstPtr& odom)
+        {
+            if (!m_simulation)
+            {
+                if (isnan(m_offsetX) || isnan(m_offsetY))
+                {
+                    m_offsetX = m_position.x - odom->pose.pose.position.x;
+                    m_offsetY = m_position.y - odom->pose.pose.position.y;
+                }
+                m_position.x = odom->pose.pose.position.x + m_offsetX;
+                m_position.y = odom->pose.pose.position.y + m_offsetY;
+                m_position.t = odom->header.stamp;
+                
+                m_positionsHist[m_positionsHistIdx] = m_position;
+                m_positionsHistIdx = (m_positionsHistIdx+1) % SIZE_POSITIONS_HIST;
+            }
         }
         
         void moveOrderCallback(const geometry_msgs::Twist::ConstPtr& order)
         {
             //ROS_INFO("Received order: v=%.3f, r=%.3f", order->linear.x, order->angular.z);
-            
-            double deltaTime = (ros::Time::now() - m_time).toSec();
-            
-            if (fabs(m_angularSpeed) > 1e-5)
+            if (m_simulation)
             {
-                double r = m_linearSpeed / m_angularSpeed;
-                double deltaAngle = m_angularSpeed * deltaTime;
-                m_position.x += r * (sin(deltaAngle + m_position.z) - sin(m_position.z));
-                m_position.y -= r * (cos(deltaAngle + m_position.z) - cos(m_position.z));
-                if (m_simulation)
+                ros::Time t = ros::Time::now();
+                double deltaTime = (t - m_position.t).toSec();
+                m_position.t = t;
+                
+                if (fabs(m_angularSpeed) > 1e-5)
+                {
+                    double r = m_linearSpeed / m_angularSpeed;
+                    double deltaAngle = m_angularSpeed * deltaTime;
+                    m_position.x += r * (sin(deltaAngle + m_position.z) - sin(m_position.z));
+                    m_position.y -= r * (cos(deltaAngle + m_position.z) - cos(m_position.z));
                     m_position.z += deltaAngle;
-            }
-            else
-            {
-                m_position.x += m_linearSpeed * deltaTime * cos(m_position.z);
-                m_position.y += m_linearSpeed * deltaTime * sin(m_position.z);
+                }
+                else
+                {
+                    m_position.x += m_linearSpeed * deltaTime * cos(m_position.z);
+                    m_position.y += m_linearSpeed * deltaTime * sin(m_position.z);
+                }
             }
 
             m_linearSpeed = order->linear.x;
             m_angularSpeed = order->angular.z;
-            m_time = ros::Time::now();
-            
-            publishTransforms();
         }
         
         void localMapScanCallback(const nav_msgs::OccupancyGrid::ConstPtr& occ)
@@ -754,12 +811,12 @@ class DeadReckoning
             m_scanGrid.draw(SCREEN_WIDTH, SCREEN_HEIGHT, m_minX, m_maxX, m_minY, m_maxY, m_gridSurf);
             SDL_BlitSurface(m_gridSurf, NULL, m_screen, &rect);
             
-            if (!m_simulation)
+            /*if (!m_simulation)
             {
                 SDL_FillRect(m_gridSurf, NULL, SDL_MapRGB(m_gridSurf->format, 0,0,0));
                 m_depthGrid.draw(SCREEN_WIDTH, SCREEN_HEIGHT, m_minX, m_maxX, m_minY, m_maxY, m_gridSurf);
                 SDL_BlitSurface(m_gridSurf, NULL, m_screen, &rect);
-            }
+            }*/
             
             double kx = SCREEN_WIDTH / (m_maxX - m_minX);
             double ky = SCREEN_HEIGHT / (m_maxY - m_minY);
@@ -832,13 +889,26 @@ class DeadReckoning
                 m_position.z = M_PI/2;
             }
             
+            m_offsetX = nan("");
+            m_offsetY = nan("");
+            m_offsetZ = nan("");
+            
+            m_positionsHist = new StampedPos[SIZE_POSITIONS_HIST];
+            //TODO exception if m_positionsHist == NULL
+            for (int i=0 ; i < SIZE_POSITIONS_HIST ; i++)
+            {
+                m_positionsHist[i].x = nan("");
+                m_positionsHist[i].y = nan("");
+                m_positionsHist[i].z = nan("");
+            }
+            m_positionsHistIdx = 0;
+            
             for (int i=0 ; i < 256 ; i++)
             {
                 m_markersPos[i].x = nan("");
                 m_markersPos[i].y = nan("");
             }
             
-            m_startOrientation = m_position.z;
             m_scanGrid = Grid(0.05, ros::Duration(120.0), m_minX, m_maxX, m_minY, m_maxY, false);
             m_depthGrid = m_scanGrid;
             
@@ -883,10 +953,22 @@ class DeadReckoning
             }
             
             m_orderSub = m_node.subscribe<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1000, &DeadReckoning::moveOrderCallback, this);
-            ROS_INFO("Waiting for commands publisher...");
-            while (ros::ok() && m_orderSub.getNumPublishers() <= 0)
-                rate.sleep();
-            checkRosOk_v();
+            if (m_simulation)
+            {
+                ROS_INFO("Waiting for commands publisher...");
+                while (ros::ok() && m_orderSub.getNumPublishers() <= 0)
+                    rate.sleep();
+                checkRosOk_v();
+            }
+            
+            m_odomSub = m_node.subscribe<nav_msgs::Odometry>("/odom", 1000, &DeadReckoning::odomCallback, this);
+            if (!m_simulation)
+            {
+                ROS_INFO("Waiting for odometry...");
+                while (ros::ok() && m_odomSub.getNumPublishers() <= 0)
+                    rate.sleep();
+                checkRosOk_v();
+            }
             
             m_imuSub = m_node.subscribe<sensor_msgs::Imu>("/mobile_base/sensors/imu_data", 1000, &DeadReckoning::IMUCallback, this);
             if (!m_simulation)
@@ -930,6 +1012,8 @@ class DeadReckoning
 
         ~DeadReckoning()
         {
+            if (m_positionsHist != NULL)
+                delete m_positionsHist;
             if (m_scanRanges != NULL)
                 delete m_scanRanges;
             if (m_scanCloudPoints != NULL)
@@ -954,6 +1038,8 @@ class DeadReckoning
             {
                 ros::spinOnce();
                 updateDisplay();
+                publishTransforms();
+                publishMarkersTransforms();
                 rate.sleep();
             }
         }
@@ -973,7 +1059,8 @@ const std::string DeadReckoning::DEPTHGRIDPOS_TRANSFORM_NAME = "deadreckoning_de
 const std::string DeadReckoning::MARKERPOS_TRANSFORM_NAME = "deadreckoning_markerpos";
 const double DeadReckoning::MARKER_SIZE = 0.175;
 const double DeadReckoning::MARKER_REF_DIST = 0.20;
-        
+const int DeadReckoning::SIZE_POSITIONS_HIST = 1000;
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "deadreckoning");
