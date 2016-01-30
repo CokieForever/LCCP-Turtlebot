@@ -26,8 +26,8 @@ int main( int argc, char** argv )
         return 1;
     }
     
-    Mat img_object = imread( templatePath, CV_LOAD_IMAGE_GRAYSCALE );
-    Mat img_scene = imread( imagePath, CV_LOAD_IMAGE_GRAYSCALE );
+    Mat img_object = imread( templatePath );
+    Mat img_scene = imread( imagePath );
 
     if( !img_object.data || !img_scene.data )
     {
