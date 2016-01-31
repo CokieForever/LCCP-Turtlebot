@@ -104,6 +104,7 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(orb_test src/orb_test.cpp src/orbdetector.cpp)
+add_executable(friendmatcher_test src/friendmatcher_test.cpp src/friendmatcher.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -111,6 +112,11 @@ add_executable(orb_test src/orb_test.cpp src/orbdetector.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(orb_test
+  ${catkin_LIBRARIES}
+  ${roscpp_LIBRARIES}
+  ${OpenCV_LIBS}
+)
+target_link_libraries(friendmatcher_test
   ${catkin_LIBRARIES}
   ${roscpp_LIBRARIES}
   ${OpenCV_LIBS}
