@@ -13,8 +13,8 @@ class DetectFriend
 {
     public:
         DetectFriend(ros::NodeHandle& nodeHandle);
-        void Identification();
-        const static double min_score	=0.7;
+	std::vector<Rect> clusters(Mat img, int id);
+	void Identification();
     private:
         ros::NodeHandle& m_nodeHandle;
         ros::Subscriber m_cameraSub;
