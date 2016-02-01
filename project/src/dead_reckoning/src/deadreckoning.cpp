@@ -396,6 +396,7 @@ class DeadReckoning
         static const std::string SCANGRIDPOS_TRANSFORM_NAME;
         static const std::string DEPTHGRIDPOS_TRANSFORM_NAME;
         static const std::string MARKERPOS_TRANSFORM_NAME;
+        static const std::string FRIENDPOS_TRANSFORM_NAME;
         static const double MARKER_SIZE;
         static const double MARKER_REF_DIST;
         static const int SIZE_POSITIONS_HIST;
@@ -461,7 +462,7 @@ class DeadReckoning
         
         void friendsCallback(const detect_friend::FriendsInfos::ConstPtr& friendsInfos)
         {
-            for (int i=0 ; i < NB_FRIENDS ; i++)
+            /*for (int i=0 ; i < NB_FRIENDS ; i++)
                 m_friendInSight[i] = false;
             for (std::vector<detect_friend::Friend_id>::const_iterator it = friendsInfos->infos.begin() ; it != friendsInfos->infos.end() ; it++)
             {
@@ -476,7 +477,7 @@ class DeadReckoning
                 m_friendsPos[it->id].y = d * sin(angle) + pos.y;
                 m_friendsPos[it->id].t = friendsInfos->time;
                 m_friendInSight[it->id] = true;
-            }
+            }*/
         }
         
         void markersCallback(const detect_marker::MarkersInfos::ConstPtr& markersInfos)
@@ -822,28 +823,28 @@ class DeadReckoning
             if (!m_node.getParam("package_path", packagePath))
                ROS_WARN("The package path is not set, it will default to '~'.");
 
-            if ((m_robotSurf = loadImg(packagePath + "/turtlebot_small.png") == NULL))
+            if ((m_robotSurf = loadImg(packagePath + "/turtlebot_small.png")) == NULL)
                 return false;
-            if ((m_markerSurf = loadImg(packagePath + "/target_small.png") == NULL))
+            if ((m_markerSurf = loadImg(packagePath + "/target_small.png")) == NULL)
                 return false;
-            if (m_markerSurfTransparent = loadImg(packagePath + "/target_small_tr.png") == NULL)
+            if ((m_markerSurfTransparent = loadImg(packagePath + "/target_small_tr.png")) == NULL)
                 return false;
             
             m_friendSurf = new SDL_Surface*[NB_FRIENDS];
             m_friendSurfTransparent = new SDL_Surface*[NB_FRIENDS];
             //TODO check if not NULL
             
-            if (m_friendSurf[0] = loadImg(packagePath + "/star_small.png") == NULL)
+            if ((m_friendSurf[0] = loadImg(packagePath + "/star_small.png")) == NULL)
                 return false;
-            if (m_friendSurf[1] = loadImg(packagePath + "/coin_small.png") == NULL)
+            if ((m_friendSurf[1] = loadImg(packagePath + "/coin_small.png")) == NULL)
                 return false;
-            if (m_friendSurf[2] = loadImg(packagePath + "/mushroom_small.png") == NULL)
+            if ((m_friendSurf[2] = loadImg(packagePath + "/mushroom_small.png")) == NULL)
                 return false;
-            if (m_friendSurfTransparent[0] = loadImg(packagePath + "/star_small_tr.png") == NULL)
+            if ((m_friendSurfTransparent[0] = loadImg(packagePath + "/star_small_tr.png")) == NULL)
                 return false;
-            if (m_friendSurfTransparent[1] = loadImg(packagePath + "/coin_small_tr.png") == NULL)
+            if ((m_friendSurfTransparent[1] = loadImg(packagePath + "/coin_small_tr.png")) == NULL)
                 return false;
-            if (m_friendSurfTransparent[2] = loadImg(packagePath + "/mushroom_small_tr.png") == NULL)
+            if ((m_friendSurfTransparent[2] = loadImg(packagePath + "/mushroom_small_tr.png")) == NULL)
                 return false;
             
             m_gridSurf = SDL_CreateRGBSurface(SDL_HWSURFACE, SCREEN_WIDTH, SCREEN_HEIGHT, 32,0,0,0,0);
@@ -857,9 +858,9 @@ class DeadReckoning
             return true;
         }
         
-        SDL_Surf* loadImg(std::string path)
+        SDL_Surface* loadImg(std::string path)
         {
-            SDL_Surf *surf = IMG_Load(path.c_str());
+            SDL_Surface *surf = IMG_Load(path.c_str());
             if (!surf)
                 ROS_ERROR("Unable to load image \"%s\": %s", path.c_str(), IMG_GetError());
             return surf;
@@ -913,7 +914,7 @@ class DeadReckoning
             
             for (int i=0 ; i < NB_FRIENDS ; i++)
             {
-                if (isnan(m_friendsPos.x) || isnan(m_friendsPos.y))
+                if (isnan(m_friendsPos[i].x) || isnan(m_friendsPos[i].y))
                     continue;
                 convertPosToDisplayCoord(m_markersPos[i].x, m_markersPos[i].y, x, y);
                 rect.x = x-m_markerSurf->w/2;
@@ -1179,6 +1180,7 @@ const std::string DeadReckoning::ROBOTPOS_TRANSFORM_NAME = "deadreckoning_robotp
 const std::string DeadReckoning::SCANGRIDPOS_TRANSFORM_NAME = "deadreckoning_scangridpos";
 const std::string DeadReckoning::DEPTHGRIDPOS_TRANSFORM_NAME = "deadreckoning_depthgridpos";
 const std::string DeadReckoning::MARKERPOS_TRANSFORM_NAME = "deadreckoning_markerpos";
+const std::string DeadReckoning::FRIENDPOS_TRANSFORM_NAME = "deadreckoning_friendpos";
 const double DeadReckoning::MARKER_SIZE = 0.175;
 const double DeadReckoning::MARKER_REF_DIST = 0.20;
 const int DeadReckoning::SIZE_POSITIONS_HIST = 1000;
