@@ -419,7 +419,7 @@ class DeadReckoning
         StampedPos m_position;
         StampedPos *m_positionsHist;
         int m_positionsHistIdx;
-        double m_offsetX, m_offsetY, m_offsetZ;
+        double m_offsetX, m_offsetY, m_offsetZ, m_offsetZOdom;
         double m_linearSpeed;
         double m_angularSpeed;
         Vector *m_scanCloudPoints, *m_depthCloudPoints;
@@ -488,13 +488,15 @@ class DeadReckoning
         {
             if (!m_simulation)
             {
-                if (isnan(m_offsetX) || isnan(m_offsetY))
+                double angle = 2*asin(odom->pose.pose.orientation.z);
+                if (isnan(m_offsetX) || isnan(m_offsetY) || isnan(m_offsetZOdom))
                 {
                     m_offsetX = m_position.x - odom->pose.pose.position.x;
                     m_offsetY = m_position.y - odom->pose.pose.position.y;
+                    m_offsetZOdom = m_position.z - angle;
                 }
-                m_position.x = odom->pose.pose.position.x + m_offsetX;
-                m_position.y = odom->pose.pose.position.y + m_offsetY;
+                m_position.x = odom->pose.pose.position.x * cos(m_offsetZOdom) + odom->pose.pose.position.y * sin(m_offsetZOdom) + m_offsetX;
+                m_position.y = -odom->pose.pose.position.x * sin(m_offsetZOdom) + odom->pose.pose.position.y * cos(m_offsetZOdom) + m_offsetY;
                 m_position.t = odom->header.stamp;
                 
                 m_positionsHist[m_positionsHistIdx] = m_position;
@@ -903,6 +905,7 @@ class DeadReckoning
             m_offsetX = nan("");
             m_offsetY = nan("");
             m_offsetZ = nan("");
+            m_offsetZOdom = nan("");
             
             m_positionsHist = new StampedPos[SIZE_POSITIONS_HIST];
             //TODO exception if m_positionsHist == NULL
