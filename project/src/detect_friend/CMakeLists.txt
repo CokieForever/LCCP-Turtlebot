@@ -5,10 +5,12 @@ project(detect_friend)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  cv_bridge
   rosconsole
   roscpp
   rostime
-  cv_bridge
+  std_msgs
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -69,6 +71,16 @@ find_package(catkin REQUIRED COMPONENTS
 #   DEPENDENCIES
 #   std_msgs  # Or other packages containing msgs
 # )
+add_message_files(
+  FILES
+  FriendsInfos.msg
+  Friend_id.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -84,8 +96,10 @@ catkin_package(
 #  LIBRARIES dead_reckoning
 #  CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
-)
 
+
+CATKIN_DEPENDS message_runtime
+)
 ###########
 ## Build ##
 ###########
@@ -104,6 +118,10 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(orb_test src/orb_test.cpp src/orbdetector.cpp)
+add_executable(friendmatcher_test src/friendmatcher_test.cpp src/friendmatcher.cpp)
+add_executable(detect_friend src/detect_friend.cpp src/detect_main.cpp src/friendmatcher.cpp)
+add_dependencies(detect_friend detect_friend_generate_messages_cpp)
+target_link_libraries(detect_friend ${catkin_LIBRARIES}  ${roscpp_LIBRARIES} ${OpenCV_LIBS})
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -111,6 +129,11 @@ add_executable(orb_test src/orb_test.cpp src/orbdetector.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(orb_test
+  ${catkin_LIBRARIES}
+  ${roscpp_LIBRARIES}
+  ${OpenCV_LIBS}
+)
+target_link_libraries(friendmatcher_test
   ${catkin_LIBRARIES}
   ${roscpp_LIBRARIES}
   ${OpenCV_LIBS}

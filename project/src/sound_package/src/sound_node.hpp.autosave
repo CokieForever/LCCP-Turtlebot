@@ -23,7 +23,6 @@ class SoundClass
 		ros::Subscriber m_rosFriendIdSub;
 		ros::Subscriber m_rosBangedBoxSub;
 		ros::Publisher m_rosPowerUp;
-
 		ros::Time m_timer;
 		
 		void getFriendIdCallback(const detect_friend::FriendsInfos &friendInfo);

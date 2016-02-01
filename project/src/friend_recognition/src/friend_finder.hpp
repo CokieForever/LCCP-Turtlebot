@@ -1,0 +1,4 @@
+#ifndef FRIEND_FINDER_HPP
+#define FRIEND_FINDER_HPP
+
+#endif // FRIEND_FINDER_HPP

@@ -5,7 +5,7 @@
 
 SoundClass::SoundClass()
 {
-    //m_rosFriendIdSub = m_rosNode.subscribe("/friendinfo", 5, &SoundClass::getFriendIdCallback, this);
+    m_rosFriendIdSub = m_rosNode.subscribe("/friendinfo", 5, &SoundClass::getFriendIdCallback, this);
     m_rosBangedBoxSub = m_rosNode.subscribe("/bangedBox", 5, &SoundClass::bangedBoxCallback, this);
     m_rosPowerUp = m_rosNode.advertise<std_msgs::Bool>("gotStar", 10);
     m_startTime = ros::Time::now();
@@ -15,17 +15,18 @@ SoundClass::SoundClass()
     m_isPowered.data = 0;
 }
 
-/*
+
 void SoundClass::getFriendIdCallback(const detect_friend::FriendsInfos &friendInfo)
 {
 	ROS_INFO("In getFriendIdCallback");
-	if(friendInfo)
+	if(friendInfo.infos.size()!=0 && ((ros::Time::now()-m_timer).toSec() >3))
 		{
-			for(int i = 0; i<friendInfo->info.size(), i++)
+			m_timer = ros::Time::now();
+			for(int i = 0; i<friendInfo.infos.size(); i++)
 				{
-					std::cout<<"found friend with ID: "<<friendInfo->info[i].id<<std::endl;
+					std::cout<<"found friend with ID: "<<(int)friendInfo.infos[i].id<<std::endl;
 
-					std::string buffName = getFriendName(randomFriend);
+					std::string buffName = getFriendName(friendInfo.infos[i].id);
 					std::cout<<buffName<<std::endl;
 					if(buffName=="star" && !m_isPowered.data)
 						{
@@ -42,12 +43,12 @@ void SoundClass::getFriendIdCallback(const detect_friend::FriendsInfos &friendIn
 						}
 
 							playSoundForFriend(buffName);
-							sleep(1)
+							sleep(1);
 				}
 		}
 	else{ std::cout<<"Sorry, got no friends :-( "<<std::endl;}
 }
-*/
+
 
 void SoundClass::playSoundForFriend(std::string friendName)
 {
@@ -79,8 +80,8 @@ int SoundClass::generateRandomFriend()
 	int returnValue= -1;
 	double randNum =  ((double) rand() / (RAND_MAX));
 	
-	if(randNum<=0.1){returnValue = 1;}
-	else if(randNum>0.1 && randNum <= 0.85){returnValue = 0;}
+	if(randNum<=0.1){returnValue = 0;}
+	else if(randNum>0.1 && randNum <= 0.85){returnValue = 1;}
 	else if(randNum>0.85){returnValue = 2;}
 	
 
@@ -98,8 +99,8 @@ std::string SoundClass::getFriendName(int id)
 	switch(id)
 	{
 		case 0: buffer = star; break;
-		case 1: buffer = coin; break;
-		case 2: buffer = mushroom; break;
+		case 1: buffer = mushroom; break;
+		case 2: buffer = coin; break;
 		default: buffer = "empty"; break;
 	}	
 	return buffer;
