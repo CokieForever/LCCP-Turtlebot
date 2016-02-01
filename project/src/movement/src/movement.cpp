@@ -20,7 +20,6 @@ Mover::Mover()
     //Publishers
     commandPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 10);
     targetReachedRequest = node.advertise<std_msgs::Empty>("targetReached", 10);
-
     //Subscribers
     laserSub = node.subscribe("/scan", 1, &Mover::scanCallback, this);
     bumperSub = node.subscribe("mobile_base/events/bumper", 20, &Mover::bumperSubCallback, this);
@@ -38,7 +37,7 @@ void Mover::driveForwardOdom(double distance)
 
     //the command will be to go forward at 0.2 m/s
     base_cmd.linear.y = base_cmd.angular.z = 0;
-    base_cmd.linear.x = 0.25;
+    base_cmd.linear.x = TURTLE_LINEAR_VELOCITY;
 
     ros::Rate rate(10.0);
     double distanceMoved = 0;
@@ -60,14 +59,14 @@ void Mover::driveForwardOdom(double distance)
 void Mover::rotateOdom(double angle)
 {
     //wait for the listener to get the first message
-    listener.waitForTransform("base_footprint", "/odom", ros::Time(0), ros::Duration(1.0));
+    listener.waitForTransform("base_footprint", "/odom", ros::Time(0), ros::Duration(1.0)); //was (0)
 
     //we will record transforms here
     tf::StampedTransform start_transform;
     tf::StampedTransform current_transform;
 
     //record the starting transform from the odometry to the base frame
-    listener.lookupTransform("base_footprint", "/odom", ros::Time(0), start_transform);
+    listener.lookupTransform("base_footprint", "/odom", ros::Time(0), start_transform); //was (0)
 
     //we will be sending commands of type "twist"
     geometry_msgs::Twist base_cmd;
@@ -75,12 +74,12 @@ void Mover::rotateOdom(double angle)
     if(angle<0)
     {
         base_cmd.linear.y = base_cmd.linear.x = 0;
-        base_cmd.angular.z = 0.25;
+        base_cmd.angular.z = TURTLE_ANGULAR_VELOCITY;
     }
     else
     {
         base_cmd.linear.y = base_cmd.linear.x = 0;
-        base_cmd.angular.z = -0.25;
+        base_cmd.angular.z = -1 * TURTLE_ANGULAR_VELOCITY;
     }
 
     bool done = false;
@@ -100,6 +99,7 @@ void Mover::rotateOdom(double angle)
 
         //send the rotation command
         commandPub.publish(base_cmd);
+        ros::spinOnce();
         rate2.sleep();
 
         if(runFirstTime==false){previousAngle = currentAngle;}
@@ -150,13 +150,12 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
     int minIndex = ceil((MIN_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
     int maxIndex = floor((MAX_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
-    //float closestRange = scan->ranges[minIndex];
-    float closestRange;
+    //float closestRange = scan->ranges[minIndex]; //remove assignment if it doesn't work
+    float closestRange = scan->ranges[minIndex];
     //save distance between robot and marker (which is in the center)
     if(scan->ranges[0]<=10 && scan->ranges[0]!=INFINITY){
         m_distanceToMarker = scan->ranges[0];
     }
-    ROS_INFO("Distance to marker %f !", m_distanceToMarker);
     for(int currIndex = minIndex+1; currIndex<=maxIndex; currIndex++)
     {
         if(scan->ranges[currIndex] < closestRange)
@@ -164,17 +163,18 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
             closestRange =	scan->ranges[currIndex];
         }
     }
-    //ROS_INFO("closest range = %f", closestRange);
     if(closestRange < MIN_PROXIMITY_RANGE_M)
     {
         m_keepMoving=false;
         //rotate only if not approaching target
         ROS_INFO("Obstacle in %f Turn 25 degrees!", closestRange);
-        rotateOdom(25.0);
+       // rotateOdom(25.0);
     }
     else
     {
         m_keepMoving = true;
+        if (!m_gotTarget)
+            moveRandomly();
     }
     ros::spinOnce();
 }
@@ -198,7 +198,7 @@ void Mover::bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumperSu
         //Move backwards
         geometry_msgs::Twist base_cmd;
         base_cmd.linear.y = base_cmd.angular.z = 0;
-        base_cmd.linear.x = -0.2;
+        base_cmd.linear.x = -1 * TURTLE_LINEAR_VELOCITY;
         commandPub.publish(base_cmd);//drive backwards
         ros::Duration(0.5).sleep(); // sleep for half a second
         m_keepMoving=false;
@@ -266,8 +266,7 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
 {
     if (marker_msg->infos.size() || m_gotTarget)
     {
-        //ROS_INFO("location callback!");
-        //map the coordiante to the center
+        //map the coordiante to the center - needed for back-up plan
         int i_array_length = marker_msg->infos.size();
         float f_Xm = 0.0;
         //float f_Ym = marker_msg->infos[i].y;
@@ -286,19 +285,15 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
                 m_outOfSight = true;
             }
         }
-
-        //ROS_INFO("Location of marker: %f", f_Xm);
-        //was if (!m_reachedTarget && f_Xm!=0.0 && m_gotTarget)
-        while (m_gotTarget) //  was && m_outOfSight
+        char goalMarker[100];
+        // listen to tf of next marker position
+        snprintf(goalMarker,100, "deadreckoning_markerpos_%d",m_searchMarker);
+        while (m_gotTarget && m_coordinateListener.frameExists(goalMarker)) //  was && m_outOfSight
         {
-            ROS_INFO("TF: SWITCHING TO TF");
             //move to transform approach
             ros::Rate rate(10);
-            //TF - decrease distance to target
             tf::StampedTransform transform_marker;
-            char goalMarker[100];
-            // listen to tf of next marker position
-            snprintf(goalMarker,100, "deadreckoning_markerpos_%d",m_searchMarker);
+
             try{
                 //Listen to transformations: Position of robot and position of marker
                 m_coordinateListener.lookupTransform("deadreckoning_robotpos", goalMarker,
@@ -313,7 +308,8 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
             // decrease distance between robot and marker, while avoiding obstacles;
             float f_distance_to_marker = sqrt(pow(transform_marker.getOrigin().x(), 2) +
                                               pow(transform_marker.getOrigin().y(), 2));
-            if ( (f_distance_to_marker <= 0.5)) //m_distanceToMarker <= 0.7 &&
+
+            if (f_distance_to_marker <= 0.7) //m_distanceToMarker <= 0.7 &&
             {
                 m_gotTarget = false;
                 vel_msg.angular.z = 0;
@@ -324,15 +320,25 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
             }
             else
             {
-                vel_msg.angular.z = 2.0 * atan2(transform_marker.getOrigin().y(),
-                                                transform_marker.getOrigin().x());
-                vel_msg.linear.x = 0.2 * sqrt(pow(transform_marker.getOrigin().x(), 2) +
-                                              pow(transform_marker.getOrigin().y(), 2));
+                if (m_keepMoving)
+                {
+                    vel_msg.angular.z = 2.0 * atan2(transform_marker.getOrigin().y(),
+                                                    transform_marker.getOrigin().x());
+                    vel_msg.linear.x = 0.2 * sqrt(pow(transform_marker.getOrigin().x(), 2) +
+                                                  pow(transform_marker.getOrigin().y(), 2));
+                }
+                else
+                {
+                    vel_msg.angular.z = 0;
+                    vel_msg.linear.x = 0;
+                }
             }
             commandPub.publish(vel_msg);
             ros::spinOnce();
             rate.sleep();
         }
+        ros::spinOnce();
+
         /* Back-up plan
         if (!m_reachedTarget && m_gotTarget && !m_outOfSight)
         {
@@ -372,13 +378,10 @@ void Mover::targetFinishedCallback(const std_msgs::EmptyConstPtr empty)
 }
 void Mover::moveRandomly()
 {
-
     srand(time(NULL));
     double randDist = 1.0*((double) rand() / (RAND_MAX));
     double randAngle = 90.0*((double) rand() / (RAND_MAX));
-    // ROS_INFO("Random Angle = %f", randAngle);
     rotateOdom(randAngle);
-    //ROS_INFO("Random Distance = %f", randDist);
     driveForwardOdom(randDist);
     ROS_INFO("RAndom Walk");
 }
@@ -394,19 +397,25 @@ void Mover::startMoving()
             m_reachedTarget = false;
             moveRandomly();
         }
-        else
+
+        if ((m_searchMarker - 1) == 7)
         {
-            //   driveForwardOdom(0.2);
-            if (m_finishedMarkerSearch)
-            {
-                ROS_INFO("Done!");
-                break;
-            }
+            ROS_INFO("Done!");
+            break;
+            m_finishedMarkerSearch = true;
+            m_keepMoving = false;
         }
         ros::spinOnce();
         rate.sleep();
     }
-    while(!m_keepMoving)
+    while (m_finishedMarkerSearch)
+    {
+        geometry_msgs::Twist vel_msg;
+        vel_msg.linear.x = 0;
+        vel_msg.angular.z = 0;
+        commandPub.publish(vel_msg);
+    }
+    while(!m_keepMoving && !m_finishedMarkerSearch)
     {
         rotateOdom(30);
         ros::spinOnce();
