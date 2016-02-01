@@ -426,11 +426,12 @@ class DeadReckoning
         int m_scanCloudPointsStartIdx, m_depthCloudPointsStartIdx;
         Grid m_scanGrid, m_depthGrid;
         SDL_Surface *m_screen;
-        SDL_Surface *m_robotSurf, *m_markerSurf;
+        SDL_Surface *m_robotSurf, *m_markerSurf, *m_markerSurfTransparent;
         SDL_Surface *m_gridSurf;
         double m_minX, m_maxX, m_minY, m_maxY;
         tf::TransformBroadcaster m_transformBroadcaster;
         StampedPos m_markersPos[256];
+        bool m_markerInSight[256];
         
         StampedPos getPosForTime(const ros::Time& time)
         {
@@ -454,6 +455,8 @@ class DeadReckoning
         
         void markersCallback(const detect_marker::MarkersInfos::ConstPtr& markersInfos)
         {
+            for (int i=0 ; i < 256 ; i++)
+                m_markerInSight[i] = false;
             for (std::vector<detect_marker::MarkerInfo>::const_iterator it = markersInfos->infos.begin() ; it != markersInfos->infos.end() ; it++)
             {
                 if (it->id < 0 || it->id > 255)
@@ -466,6 +469,7 @@ class DeadReckoning
                 m_markersPos[it->id].x = d * cos(angle) + pos.x;
                 m_markersPos[it->id].y = d * sin(angle) + pos.y;
                 m_markersPos[it->id].t = markersInfos->time;
+                m_markerInSight[it->id] = true;
             }
         }
 
@@ -785,6 +789,13 @@ class DeadReckoning
                 return false;
             }
             
+            m_markerSurfTransparent = IMG_Load((packagePath + "/target_small_tr.png").c_str());
+            if (!m_markerSurfTransparent)
+            {
+                ROS_ERROR("Unable to load the transparent marker bitmap (%s).", (packagePath + "/target_small_tr.png").c_str());
+                return false;
+            }
+            
             m_gridSurf = SDL_CreateRGBSurface(SDL_HWSURFACE, SCREEN_WIDTH, SCREEN_HEIGHT, 32,0,0,0,0);
             if (!m_gridSurf)
             {
@@ -839,7 +850,7 @@ class DeadReckoning
                 convertPosToDisplayCoord(m_markersPos[i].x, m_markersPos[i].y, x, y);
                 rect.x = x-m_markerSurf->w/2;
                 rect.y = y-m_markerSurf->h/2;
-                SDL_BlitSurface(m_markerSurf, NULL, m_screen, &rect);
+                SDL_BlitSurface(m_markerInSight[i] ? m_markerSurf : m_markerSurfTransparent, NULL, m_screen, &rect);
             }
             
             convertPosToDisplayCoord(m_position.x, m_position.y, x, y);
@@ -907,6 +918,7 @@ class DeadReckoning
             {
                 m_markersPos[i].x = nan("");
                 m_markersPos[i].y = nan("");
+                m_markerInSight[i] = false;
             }
             
             m_scanGrid = Grid(0.05, ros::Duration(120.0), m_minX, m_maxX, m_minY, m_maxY, false);
@@ -1026,6 +1038,8 @@ class DeadReckoning
                 SDL_FreeSurface(m_gridSurf);
             if (m_markerSurf != NULL)
                 SDL_FreeSurface(m_markerSurf);
+            if (m_markerSurfTransparent != NULL)
+                SDL_FreeSurface(m_markerSurfTransparent);
             IMG_Quit();
             SDL_Quit();
         }
