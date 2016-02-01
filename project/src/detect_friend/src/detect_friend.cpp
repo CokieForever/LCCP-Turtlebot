@@ -91,8 +91,8 @@ DetectFriend::DetectFriend(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
 void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
 {
     ROS_INFO("Received image from camera.");
-    detect_friend::FriendsInfos friends;
-    detect_friend::Friend_id id_friend;
+    detect_friend::FriendsInfos friendsInfos;
+    detect_friend::Friend_id friend_details;
     Mat img;
 
     try
@@ -118,8 +118,11 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
 
       if (result1.score>min_score)
       {
-        id_friend.id=0;
-        friends.infos.push_back(id_friend);
+        int id=0;
+        friend_details=publish_infos_of_friend(img, id, result1.boundingRect);
+        friendsInfos.infos.push_back(friend_details);
+        //id_friend.center.x=center_of_friend(int i, cv::Rect rect);
+
         /*cv::Mat display = m_friendmatcher.drawResult(img, result1);
         cv::imshow("Result1", display);
         cv::waitKey(1);*/
@@ -127,8 +130,9 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
 
       if (result2.score>min_score)
       {
-        id_friend.id=1;
-        friends.infos.push_back(id_friend);
+        int id=1;
+        friend_details=publish_infos_of_friend(img, id, result2.boundingRect);
+        friendsInfos.infos.push_back(friend_details);
         /*cv::Mat display = m_friendmatcher.drawResult(img, result2);
         cv::imshow("Result2", display);
         cv::waitKey(1);*/
@@ -136,21 +140,97 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
 
       if (result3.score>min_score)
       {
-        id_friend.id=2;
-        friends.infos.push_back(id_friend);
+         int id=2;
+        friend_details=publish_infos_of_friend(img, id, result3.boundingRect);
+        friendsInfos.infos.push_back(friend_details);
         /*cv::Mat display = m_friendmatcher.drawResult(img, result3);
         cv::imshow("Result3", display);
         cv::waitKey(1);*/
       }
-        
-      m_friend_idPub.publish(friends);
-
-      
-
-
-
+      if (friendsInfos.infos.size()>0)
+        {
+          m_friend_idPub.publish(friendsInfos);
+        }
 
 }
+
+
+detect_friend::Friend_id DetectFriend::publish_infos_of_friend(const cv::Mat& img, int id, Rect rectangle )
+{
+  Point center;
+  Point corners[4];
+  double width=img.rows;
+  double height=img.cols;
+  corners[1].x=rectangle.tl().x;
+  corners[1].y=rectangle.tl().y;
+  corners[2].x=rectangle.tl().x+rectangle.width;
+  corners[2].y=rectangle.tl().y;
+  corners[3].x=rectangle.br().x;
+  corners[3].y=rectangle.br().y;
+  corners[4].x=rectangle.tl().x;
+  corners[4].y=rectangle.tl().y-rectangle.height;
+  double FRIEND_SIZE;
+
+
+  if (!ComputeQuadrilateralCenter(corners, &center))
+      ROS_WARN("Unable to compute center.");
+  else
+  {
+      if (id==0)
+        {
+          FRIEND_SIZE=STAR_HEIGHT;
+        }
+      else if (id==1)
+        {
+          FRIEND_SIZE=MUSHROOM_HEIGHT;
+        }
+      else if(id==2)
+        {
+          FRIEND_SIZE=COIN_HEIGHT;
+        }
+
+      detect_friend::Friend_id friendInfo;
+      friendInfo.x = 2*(center.x /(double)width)-1;
+      friendInfo.y = 2*(center.y/(double)height)-1;
+      friendInfo.dz = FRIEND_SIZE * FRIEND_REF_DIST / rectangle.height;
+      friendInfo.dx = FRIEND_SIZE * (center.x-width/2) / rectangle.width;
+      friendInfo.dy = FRIEND_SIZE * (center.y-height/2) / rectangle.height;
+      friendInfo.d = sqrt(friendInfo.dy*friendInfo.dy + friendInfo.dx*friendInfo.dx + friendInfo.dz*friendInfo.dz);
+      friendInfo.id = id;
+      friendInfo.Time=ros::Time::now();
+      return friendInfo;
+
+}
+}
+
+ bool DetectFriend::ComputeLinesIntersection(Point linePoints1[2], Point linePoints2[2], Point *isectPoint)
+  {
+      double x1 = linePoints1[0].x;
+      double x2 = linePoints1[1].x;
+      double y1 = linePoints1[0].y;
+      double y2 = linePoints1[1].y;
+
+      double x3 = linePoints2[0].x;
+      double x4 = linePoints2[1].x;
+      double y3 = linePoints2[0].y;
+      double y4 = linePoints2[1].y;
+
+      double d = (x1-x2)*(y3-y4) - (y1-y2)*(x3-x4);
+      if (fabs(d) < 1e-6)
+          return false;
+
+      isectPoint->x = ((x1*y2 - y1*x2) * (x3-x4) - (x1-x2) * (x3*y4 - y3*x4)) / d;
+      isectPoint->y = ((x1*y2 - y1*x2) * (y3-y4) - (y1-y2) * (x3*y4 - y3*x4)) / d;
+      return true;
+  }
+
+  bool DetectFriend::ComputeQuadrilateralCenter(Point points[4], Point *centerPoint)
+  {
+      Point linePoints1[2] = {points[0], points[2]};
+      Point linePoints2[2] = {points[1], points[3]};
+      return ComputeLinesIntersection(linePoints1, linePoints2, centerPoint);
+  }
+
 
 void DetectFriend::Identification()
 {
