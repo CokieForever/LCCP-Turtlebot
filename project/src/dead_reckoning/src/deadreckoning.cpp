@@ -462,7 +462,7 @@ class DeadReckoning
         
         void friendsCallback(const detect_friend::FriendsInfos::ConstPtr& friendsInfos)
         {
-            /*for (int i=0 ; i < NB_FRIENDS ; i++)
+            for (int i=0 ; i < NB_FRIENDS ; i++)
                 m_friendInSight[i] = false;
             for (std::vector<detect_friend::Friend_id>::const_iterator it = friendsInfos->infos.begin() ; it != friendsInfos->infos.end() ; it++)
             {
@@ -471,13 +471,13 @@ class DeadReckoning
                 double angle = -atan(it->dx / it->dz);
                 double d = hypot(it->dx, it->dz);
                 
-                StampedPos pos = getPosForTime(friendsInfos->time);
+                StampedPos pos = getPosForTime(it->Time);
                 angle += pos.z;
                 m_friendsPos[it->id].x = d * cos(angle) + pos.x;
                 m_friendsPos[it->id].y = d * sin(angle) + pos.y;
-                m_friendsPos[it->id].t = friendsInfos->time;
+                m_friendsPos[it->id].t = it->Time;
                 m_friendInSight[it->id] = true;
-            }*/
+            }
         }
         
         void markersCallback(const detect_marker::MarkersInfos::ConstPtr& markersInfos)
