@@ -120,6 +120,7 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
       {
         int id=0;
         friend_details=publish_infos_of_friend(img, id, result1.boundingRect);
+        friend_details.Time = msg->header.stamp;
         friendsInfos.infos.push_back(friend_details);
         //id_friend.center.x=center_of_friend(int i, cv::Rect rect);
 
@@ -132,6 +133,7 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
       {
         int id=1;
         friend_details=publish_infos_of_friend(img, id, result2.boundingRect);
+        friend_details.Time = msg->header.stamp;
         friendsInfos.infos.push_back(friend_details);
         /*cv::Mat display = m_friendmatcher.drawResult(img, result2);
         cv::imshow("Result2", display);
@@ -142,6 +144,7 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
       {
          int id=2;
         friend_details=publish_infos_of_friend(img, id, result3.boundingRect);
+        friend_details.Time = msg->header.stamp;
         friendsInfos.infos.push_back(friend_details);
         /*cv::Mat display = m_friendmatcher.drawResult(img, result3);
         cv::imshow("Result3", display);
@@ -197,7 +200,6 @@ detect_friend::Friend_id DetectFriend::publish_infos_of_friend(const cv::Mat& im
       friendInfo.dy = FRIEND_SIZE * (center.y-height/2) / rectangle.height;
       friendInfo.d = sqrt(friendInfo.dy*friendInfo.dy + friendInfo.dx*friendInfo.dx + friendInfo.dz*friendInfo.dz);
       friendInfo.id = id;
-      friendInfo.Time=ros::Time::now();
       return friendInfo;
 
 }
