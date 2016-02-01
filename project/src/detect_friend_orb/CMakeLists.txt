@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(detect_friend)
+project(detect_friend_orb)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -8,9 +8,6 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   rosconsole
   roscpp
-  rostime
-  std_msgs
-  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -31,10 +28,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## * Let MSG_DEP_SET be the set of packages whose message types you use in
 ##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
 ## * In the file package.xml:
+##   * add a build_depend tag for "message_generation"
 ##   * add a build_depend and a run_depend tag for each package in MSG_DEP_SET
-##   * If MSG_DEP_SET isn't empty the following dependencies might have been
-##     pulled in transitively but can be declared for certainty nonetheless:
-##     * add a build_depend tag for "message_generation"
+##   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
+##     but can be declared for certainty nonetheless:
 ##     * add a run_depend tag for "message_runtime"
 ## * In this file (CMakeLists.txt):
 ##   * add "message_generation" and every package in MSG_DEP_SET to
@@ -49,7 +46,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 # add_message_files(
 #   FILES
-#   Grid.msg
+#   Message1.msg
+#   Message2.msg
 # )
 
 ## Generate services in the 'srv' folder
@@ -71,16 +69,26 @@ find_package(catkin REQUIRED COMPONENTS
 #   DEPENDENCIES
 #   std_msgs  # Or other packages containing msgs
 # )
-add_message_files(
-  FILES
-  FriendsInfos.msg
-  Friend_id.msg
-)
 
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-)
+################################################
+## Declare ROS dynamic reconfigure parameters ##
+################################################
+
+## To declare and build dynamic reconfigure parameters within this
+## package, follow these steps:
+## * In the file package.xml:
+##   * add a build_depend and a run_depend tag for "dynamic_reconfigure"
+## * In this file (CMakeLists.txt):
+##   * add "dynamic_reconfigure" to
+##     find_package(catkin REQUIRED COMPONENTS ...)
+##   * uncomment the "generate_dynamic_reconfigure_options" section below
+##     and list every .cfg file to be processed
+
+## Generate dynamic reconfigure parameters in the 'cfg' folder
+# generate_dynamic_reconfigure_options(
+#   cfg/DynReconf1.cfg
+#   cfg/DynReconf2.cfg
+# )
 
 ###################################
 ## catkin specific configuration ##
@@ -93,13 +101,11 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES dead_reckoning
-#  CATKIN_DEPENDS message_runtime
+#  LIBRARIES detect_friend_orb
+#  CATKIN_DEPENDS cv_bridge rosconsole roscpp
 #  DEPENDS system_lib
-
-
-CATKIN_DEPENDS message_runtime
 )
+
 ###########
 ## Build ##
 ###########
@@ -111,27 +117,27 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-## Declare a cpp library
-# add_library(dead_reckoning
-#   src/${PROJECT_NAME}/dead_reckoning.cpp
+## Declare a C++ library
+# add_library(detect_friend_orb
+#   src/${PROJECT_NAME}/detect_friend_orb.cpp
 # )
 
-## Declare a cpp executable
-add_executable(orb_test src/orb_test.cpp src/orbdetector.cpp)
-add_executable(detect_friend src/detect_friend.cpp src/detect_main.cpp src/friendmatcher.cpp)
-add_dependencies(detect_friend detect_friend_generate_messages_cpp)
-target_link_libraries(detect_friend ${catkin_LIBRARIES}  ${roscpp_LIBRARIES} ${OpenCV_LIBS})
+## Add cmake target dependencies of the library
+## as an example, code may need to be generated before libraries
+## either from message generation or dynamic reconfigure
+# add_dependencies(detect_friend_orb ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-## Add cmake target dependencies of the executable/library
-## as an example, message headers may need to be generated before nodes
-# add_dependencies(dead_reckoning_node dead_reckoning_generate_messages_cpp)
+## Declare a C++ executable
+# add_executable(detect_friend_orb_node src/detect_friend_orb_node.cpp)
+
+## Add cmake target dependencies of the executable
+## same as for the library above
+# add_dependencies(detect_friend_orb_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(orb_test
-  ${catkin_LIBRARIES}
-  ${roscpp_LIBRARIES}
-  ${OpenCV_LIBS}
-)
+# target_link_libraries(detect_friend_orb_node
+#   ${catkin_LIBRARIES}
+# )
 
 #############
 ## Install ##
@@ -148,7 +154,7 @@ target_link_libraries(orb_test
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS dead_reckoning dead_reckoning_node
+# install(TARGETS detect_friend_orb detect_friend_orb_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -167,13 +173,14 @@ target_link_libraries(orb_test
 #   # myfile2
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
-
+add_executable(detect_friend_orb src/detect_friend_orb.cpp)
+target_link_libraries(detect_friend_orb ${catkin_LIBRARIES} ${OpenCV_LIBS})
 #############
 ## Testing ##
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_dead_reckoning.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_detect_friend_orb.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
