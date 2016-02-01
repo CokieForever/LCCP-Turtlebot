@@ -4,6 +4,9 @@
 class FriendMatcher
 {
     public:
+        static cv::Mat computeDistanceImage(const cv::Mat& img, cv::Scalar color);
+        static cv::Scalar convertToLabSpace(const cv::Scalar& color);
+        
         static const double MARKER_REF_DIST = 480 * 0.2 / 0.175;
         
         struct TemplateInfo
