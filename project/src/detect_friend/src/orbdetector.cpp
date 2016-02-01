@@ -14,6 +14,49 @@ ORBDetector::ORBDetector()
     
 }
 
+ORBDetector::ORBMatchResult ORBDetector::multimatchsplit(Mat& img, const Mat& templ) const
+{
+    ORBMatchResult bestResult;
+    bestResult.score = -1;
+    
+    std::vector<Mat> tiles = splitImageAndZoom(img, 2);
+    //tiles.push_back(img);
+    for (std::vector<Mat>::iterator it=tiles.begin() ; it != tiles.end()-1 ; it++)
+    {
+        Mat tile = *it;
+        tile = sharpen(tile);
+        /*imshow("tile", tile);
+        waitKey(0);*/
+        
+        ORBMatchResult result = multimatch(tile, templ);
+        if (result.score >= 0 && result.score > bestResult.score)
+        {
+            img = tile;
+            bestResult = result;
+        }
+    }
+    
+    return bestResult;
+}
+
+ORBDetector::ORBMatchResult ORBDetector::multimatch(const Mat& img, const Mat& templ) const
+{
+    ORBMatchResult bestResult;
+    bestResult.score = -1;
+    
+    for (double k=1.0 ; k <= 4.0 ; k += 0.5)
+    {
+        Mat resized;
+        resize(templ, resized, Size(0,0), 1/k, 1/k, INTER_NEAREST);
+        
+        ORBMatchResult result = match(img, resized);
+        if (result.score >= 0 && result.score > bestResult.score)
+            bestResult = result;
+    }
+    
+    return bestResult;
+}
+
 ORBDetector::ORBMatchResult ORBDetector::match(const Mat& img, const Mat& templ) const
 {
     //-- Step 1: Detect the keypoints using ORB Detector
@@ -91,7 +134,8 @@ ORBDetector::ORBMatchResult ORBDetector::match(const Mat& img, const Mat& templ)
     binFilteredTemplate = removeIsolatedPixels(binarizeImageKMeans(filteredTemplate), 2);
     
     Mat binFDImg, binFDTemplate;
-    kernelMat = getStructuringElement(MORPH_ELLIPSE, Size(16,16));
+    int s = round(16 * templ.rows / 480.0);
+    kernelMat = getStructuringElement(MORPH_ELLIPSE, Size(s,s));
     dilate(binFilteredImg, binFDImg, kernelMat);
     dilate(binFilteredTemplate, binFDTemplate, kernelMat);
     
@@ -163,6 +207,34 @@ Mat ORBDetector::removeIsolatedPixels(const Mat& binInput, int nbMinNeighbours)
     output = output.mul(binInputCopy);
     output.convertTo(output, CV_8U, 255);
     
+    return output;
+}
+
+std::vector<Mat> ORBDetector::splitImageAndZoom(const Mat& img, int nbBlocks)
+{
+    std::vector<cv::Mat> vec;
+    double deltaX = img.cols / (double)nbBlocks;
+    double deltaY = img.rows / (double)nbBlocks;
+    for (double x = 0 ; x <= img.cols-deltaX ; x += deltaX/2)
+    {
+        int ix = ceil(x);
+        for (double y = 0 ; y <= img.rows-deltaY ; y += deltaY/2)
+        {
+            int iy = ceil(y);
+            cv::Mat tile = img(cv::Range(iy, min((int)floor(y+deltaY)+1, img.rows)), cv::Range(ix, min((int)floor(x+deltaX)+1, img.cols)));
+            cv::Mat resizedTile ;
+            cv::resize(tile, resizedTile, img.size(), 0, 0, CV_INTER_NN);
+            vec.push_back(resizedTile);
+        }
+    }
+    return vec;
+}
+
+Mat ORBDetector::sharpen(const Mat& img)
+{
+    Mat output;
+    GaussianBlur(img, output, cv::Size(21, 21), 10);
+    addWeighted(img, 1.5, output, -0.5, 0, output);
     return output;
 }
 

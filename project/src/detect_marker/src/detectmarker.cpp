@@ -16,9 +16,9 @@ DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     while (ros::ok() && m_cameraSub.getNumPublishers() <= 0)
         loopRate.sleep();
     
-    ROS_INFO("Subscribing to robot orders topic...");
-    m_velocitySub = m_nodeHandle.subscribe("/mobile_base/commands/velocity", 1, &DetectMarker::velocityCallback, this);
-    while (ros::ok() && m_cameraSub.getNumPublishers() <= 0)
+    ROS_INFO("Subscribing to robot IMU...");
+    m_IMUSub = m_nodeHandle.subscribe("/mobile_base/sensors/imu_data", 1000, &DetectMarker::IMUCallback, this);
+    while (ros::ok() && m_IMUSub.getNumPublishers() <= 0)
         loopRate.sleep();    
 
     ROS_INFO("Creating markers topic...");
@@ -27,9 +27,9 @@ DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     ROS_INFO("Done, everything's ready.");
 }
 
-void DetectMarker::velocityCallback (const geometry_msgs::Twist::ConstPtr& msg)
+void DetectMarker::IMUCallback(const sensor_msgs::Imu::ConstPtr& imu)
 {
-	m_isRotating = fabs(msg->angular.z) > 0.05;
+	m_isRotating = fabs(imu->angular_velocity.z) > 0.25;
 }
 
 std::vector<cv::Mat> DetectMarker::splitImageAndZoom(cv::Mat& img, int nbBlocks, std::vector<int>& vecX, std::vector<int>& vecY)
@@ -97,12 +97,12 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
             else if (l == 2)
                 frame = binarizeImage(frame, true);
             
-            if (l > 0)
+            /*if (l > 0)
             {
                 snprintf(frameName, 100, "Frame %d", l);
                 cv::imshow(frameName, frame);
                 cv::waitKey(1);
-            }
+            }*/
             
             std::vector<aruco::Marker> newMarkers;
             detector.detect(frame, newMarkers);
@@ -155,13 +155,15 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
         }
     }
 
-    publishAndDrawMarkers(img, markers);
+    publishAndDrawMarkers(img, markers, msg->header.stamp);
 }
 
-void DetectMarker::publishAndDrawMarkers(cv::Mat& frame, std::vector<aruco::Marker> &markers)
+void DetectMarker::publishAndDrawMarkers(cv::Mat& frame, std::vector<aruco::Marker> &markers, ros::Time time)
 {
     cv::Scalar colorScalar(255, 155, 0, 0);
     detect_marker::MarkersInfos markersInfos;
+    markersInfos.time = time;
+    
     int width = frame.cols;
     int height = frame.rows;
     int channels = frame.channels();
@@ -186,10 +188,16 @@ void DetectMarker::publishAndDrawMarkers(cv::Mat& frame, std::vector<aruco::Mark
         {
             detect_marker::MarkerInfo markerInfo;
             
-            double markerHeight = (std::max(corners[2].y, corners[3].y) - std::min(corners[0].y, corners[1].y)) / (double)(height);
+            double markerHeight = ((corners[3].y-corners[0].y) + (corners[2].y-corners[1].y)) / 2.0;
+            double markerWidth = markerHeight;  //Avoids error due to perspective
             markerInfo.x = 2*(center.x /(double)width)-1;
             markerInfo.y = 2*(center.y/(double)height)-1;
-            markerInfo.d = MARKER_REF_DIST / markerHeight;
+            
+            markerInfo.dz = MARKER_SIZE * MARKER_REF_DIST / markerHeight;
+            markerInfo.dx = MARKER_SIZE * (center.x-width/2) / markerWidth;
+            markerInfo.dy = MARKER_SIZE * (center.y-height/2) / markerHeight;
+            markerInfo.d = sqrt(markerInfo.dy*markerInfo.dy + markerInfo.dx*markerInfo.dx + markerInfo.dz*markerInfo.dz);
+            
             markerInfo.id = marker.id;
             markersInfos.infos.push_back(markerInfo);
 
