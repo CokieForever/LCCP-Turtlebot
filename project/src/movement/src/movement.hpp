@@ -4,6 +4,8 @@
 #include "kobuki_msgs/BumperEvent.h"
 #include "tf/transform_listener.h"
 #include "sensor_msgs/Image.h"
+#include <std_msgs/Bool.h>
+
 class Mover
 {
 public://Tunable parameters
@@ -43,6 +45,8 @@ private:
     //ros::Subscriber imageSub;
     ros::Subscriber getLocationSub;
     ros::Subscriber targetFinishedSub;
+	ros::Subscriber powerUpSub;
+
 
     tf::TransformListener m_coordinateListener;
     bool m_outOfSight; //set this attribute if turtlebot got target, but it went out of sight
@@ -53,6 +57,7 @@ private:
     bool m_keepMoving; //Indicates wether the robot should continue moving
     bool m_reachedTarget;
     bool m_gotTarget;
+    bool m_poweredUp;
     geometry_msgs::Vector3Stamped m_target;
     int  m_nextId;
     void moveRandomly();
@@ -65,4 +70,5 @@ private:
     void targetFinishedCallback(const std_msgs::EmptyConstPtr empty);
     void driveForwardOdom(double distance);
     void rotateOdom(double angle);
+    void checkPowerUp(const std_msgs::BoolConstPtr &powerUp);
 };

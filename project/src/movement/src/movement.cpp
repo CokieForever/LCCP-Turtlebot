@@ -15,6 +15,7 @@ Mover::Mover()
     m_searchMarker = 0;
     m_finishedMarkerSearch = false;
     m_outOfSight = true;
+    m_poweredUp = false;
     //distance between marker and turtlebot
     m_distanceToMarker = 9999;
     //Publishers
@@ -27,7 +28,7 @@ Mover::Mover()
     //  imageSub = node.subscribe("/camera/rgb/image_rect_color", 10, &Mover::rgbCallback, this);
     getLocationSub = node.subscribe("/markerinfo", 10, &Mover::getLocationCallback, this);
     targetFinishedSub = node.subscribe("targetFinishedTopic", 10, &Mover::targetFinishedCallback, this);
-
+	  powerUpSub = node.subscribe("/gotStar", 10, &Mover::havePowerUp, this);
 }
 
 
@@ -332,33 +333,14 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
             ros::spinOnce();
             rate.sleep();
         }
-        /*if (!m_reachedTarget && m_gotTarget && !m_outOfSight)
-        {
-            //adjust robot, so the marker actually is in the center
-            if (f_Xm < 0)
-            {
-                //rotate bot to the right
-                m_angularVelocity = -f_Xm*0.8;
-                approachMarker(i_marker_id);
-            }
-            else if (f_Xm > 0)
-            {
-                //rotate bot to the left
-                m_angularVelocity = -f_Xm*0.8;
-                approachMarker(i_marker_id);
-            }
-            else
-            {
-                m_angularVelocity = 0;
-                approachMarker(i_marker_id);
-            }
-        }
-        else
-        {
-            m_gotTarget=false;
-        }*/
+
     }
     ros::spinOnce();
+}
+
+void Mover::gotPowerUp(const std_msgs::BoolConstPtr &powerUp)
+{
+	m_poweredUp=powerUp->data;
 }
 
 void Mover::targetFinishedCallback(const std_msgs::EmptyConstPtr empty)
