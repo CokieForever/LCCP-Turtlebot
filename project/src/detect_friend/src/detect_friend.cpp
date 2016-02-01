@@ -1,4 +1,4 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #include <iostream>
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
@@ -9,7 +9,7 @@
 #include "cv_bridge/cv_bridge.h"
 #include "detect_friend/Friend_id.h"
 #include "detect_friend/FriendsInfos.h"
-#include "orbdetector.h"
+#include "friendmatcher.h"
 #include <sensor_msgs/image_encodings.h>
 
 
@@ -33,6 +33,52 @@ DetectFriend::DetectFriend(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     }
     ROS_INFO("Creating friend's topic...");
     m_friend_idPub = m_nodeHandle.advertise<detect_friend::FriendsInfos>("/friendinfo", 10);
+    Scalar yellowstar(0,255, 255);
+    Scalar redmushroom(0,0,255);
+    Scalar yellowcoin(32,215,247);
+    FriendMatcher::TemplateInfo star;
+    FriendMatcher::TemplateInfo mushroom;
+    FriendMatcher::TemplateInfo coin;
+    FriendMatcher friendmatcher;
+
+    ROS_INFO("Set template infos");
+
+    star.image=star_image;
+    star.id=0;
+    star.mainColor=yellowstar;
+    star.name="Star";
+    star.w=0.2;
+    star.h=0.2134;
+    star.roi.x=30;
+    star.roi.y=30;
+    star.roi.width=390;
+    star.roi.height=420;
+
+
+    mushroom.image=mushroom_image;
+    mushroom.id=1;
+    mushroom.mainColor=redmushroom;
+    mushroom.name="Mushroom";
+    mushroom.w=0.2;
+    mushroom.h=0.2;
+    mushroom.roi.x=30;
+    mushroom.roi.y=30;
+    mushroom.roi.width=420;
+    mushroom.roi.height=300;
+    friendmatcher.addTemplate(mushroom);
+
+    coin.image=coin_image;
+    coin.id=2;
+    coin.mainColor=yellowcoin;
+    coin.name="Coin";
+    coin.w=0.2;
+    coin.h=0.27;
+    coin.roi.x=60;
+    coin.roi.y=60;
+    coin.roi.width=270;
+    coin.roi.height=390;
+    friendmatcher.addTemplate(coin);
+
     ROS_INFO("Done, everything's ready.");
 }
 
@@ -44,6 +90,7 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     detect_friend::FriendsInfos friends;
     detect_friend::Friend_id id_friend;
     Mat img;
+    FriendMatcher friendmatcher;
 
     try
     {
@@ -61,100 +108,34 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
         exit(-1);
     }
 
-      clusters(img, 0);
-      clusters(img, 1);
-      clusters(img, 2);
+     //objects ids: 0 for star, 1 for mushroom, 2 for coin
+      FriendMatcher::MatchResult result1= friendmatcher.match(img, 0);
+      FriendMatcher::MatchResult result2= friendmatcher.match(img, 1);
+      FriendMatcher::MatchResult result3= friendmatcher.match(img, 2);
 
-}
-
-std::vector<Rect> DetectFriend::clusters(Mat img, int id)
-{
-
-
-  cv::Mat diff;
-  vector<vector<Point> > contours;
-  vector<Vec4i> hierarchy;
-  vector<vector<Point> > contours_poly( contours.size() );
-  vector<Rect> boundRect( contours.size() );
-  Mat drawing = Mat::zeros( diff.size(), CV_8UC3 );
-  RNG rng(12345);
-  double area;
-  int i, j;
-  Scalar scalarstarmin(0,130,200);
-  Scalar scalarstarmax(30,255,255);
-  Scalar scalarmushmin(0,0,100);
-  Scalar scalarmushmax(30,30,255);
-  Scalar scalarcoinmin(0,210 ,250);
-  Scalar scalarcoinmax(90,255,255);
-
-  //select the approptiate scalar for the color detection according to the item's id
-  if (id==0)
-    {
-      //set img element to 0 if its value is not in the range of scalars, otherwise to 1
-      inRange(img, scalarstarmin, scalarstarmax, diff);
-    }
-  else if(id==1)
-    {
-      //set img element to 0 if its value is not in the range of scalars, otherwise to 1
-      inRange(img, scalarmushmin, scalarmushmax, diff);
-    }
-  else if(id==2)
-    {
-      //set img element to 0 if its value is not in the range of scalars, otherwise to 1
-      inRange(img, scalarcoinmin, scalarcoinmax, diff);
-    }
-
-
-  //find contours in the image.
-  findContours( diff, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
-
-  //ignore the black contours
-  for(int i=0; i<contours.size(); i++)
-   {
-    if (contourArea(contours[i],true) > 0)
+      if (result1.score>min_score)
       {
-       ROS_INFO("black");
-       contours.erase(contours.begin() + i);
-       hierarchy.erase(hierarchy.begin()+i);
-       i--;
+        id_friend.id=0;
+        friends.infos.push_back(id_friend);
       }
-    else
+
+      if (result2.score>min_score)
       {
-        ROS_INFO("white");
+        id_friend.id=0;
+        friends.infos.push_back(id_friend);
       }
-  }
 
-  ROS_INFO("contour size %lu", contours.size() );
+      if (result3.score>min_score)
+      {
+        id_friend.id=0;
+        friends.infos.push_back(id_friend);
+      }
+
+      m_friend_idPub.publish(friends);
 
 
-  //create rectangles around contours of interest and draw
-  for( int i = 0; i < contours.size(); i++ )
-    {
-      approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
-      area=contourArea(contours_poly[i]);
-      ROS_INFO("area %.3f", area );
-      //ignore the contours that have area less than 10*10
-      if (area<100)
-        {
-         contours.erase(contours.begin() + i);
-         hierarchy.erase(hierarchy.begin()+i);
-         i--;
-        }
-      else
-        {
-         boundRect[i] = boundingRect( Mat(contours_poly[i]) );
-         Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-         rectangle( img,   boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0 );
-         drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
-         rectangle( drawing, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0 );
-        }
-    }
 
- imshow( "Contours", drawing );
- imshow("final", img);
- waitKey(0);
- //return vector of rectangles
- return boundRect;
+
 }
 
 void DetectFriend::Identification()
@@ -162,4 +143,3 @@ void DetectFriend::Identification()
     ROS_INFO("Starting identification.");
     ros::spin();
 }
-

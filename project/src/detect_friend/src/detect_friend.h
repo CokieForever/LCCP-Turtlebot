@@ -8,20 +8,20 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include <opencv2/imgproc/imgproc.hpp>
-using namespace cv;
+
 class DetectFriend
 {
     public:
         DetectFriend(ros::NodeHandle& nodeHandle);
-	std::vector<Rect> clusters(Mat img, int id);
 	void Identification();
+        const static double min_score =0.7;
     private:
         ros::NodeHandle& m_nodeHandle;
         ros::Subscriber m_cameraSub;
         ros::Publisher m_friend_idPub;
-        Mat star_image;
-        Mat mushroom_image;
-        Mat coin_image;
+        cv::Mat star_image;
+        cv::Mat mushroom_image;
+        cv::Mat coin_image;
         void cameraSubCallback(const sensor_msgs::Image::ConstPtr& msg);
         
 };
