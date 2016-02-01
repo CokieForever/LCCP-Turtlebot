@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include "friendmatcher.h"
 
 int main( int argc, char** argv )
@@ -31,6 +32,11 @@ int main( int argc, char** argv )
         ROS_ERROR("Error while reading images (%s, %s)", imagePath.c_str(), templatePath.c_str());
         return 1;
     }
+    
+    cv::Mat distImg = FriendMatcher::computeDistanceImage(img_scene, cv::Scalar(255,235,0));
+    cv:threshold(distImg, distImg, 0.1, 1.0, cv::THRESH_BINARY_INV);
+    cv::imshow("Lab Space", distImg);
+    cv::waitKey(0);
 
     FriendMatcher matcher;    
     FriendMatcher::TemplateInfo templateInfo;
