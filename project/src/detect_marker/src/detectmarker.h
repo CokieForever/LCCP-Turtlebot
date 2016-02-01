@@ -10,6 +10,9 @@
 class DetectMarker
 {
     public:
+        static const double MARKER_REF_DIST = 480 * 0.2 / 0.175;
+        static const double MARKER_SIZE = 0.175;
+        
         DetectMarker(ros::NodeHandle& nodeHandle);
         void detect();
         
@@ -18,13 +21,9 @@ class DetectMarker
         {
             double x, y;
         };
-
-        static const double MARKER_REF_DIST = 480 * 0.2 / 0.175;
-        static const double MARKER_SIZE = 0.175;
         
         static bool ComputeLinesIntersection(Point linePoints1[2], Point linePoints2[2], Point *isectPoint);
         static bool ComputeQuadrilateralCenter(Point points[4], Point *centerPoint);
-        
         bool m_isRotating;
         ros::NodeHandle& m_nodeHandle;
         ros::Subscriber m_cameraSub;
