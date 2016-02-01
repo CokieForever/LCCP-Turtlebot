@@ -9,7 +9,6 @@
 #include "cv_bridge/cv_bridge.h"
 #include "detect_friend/Friend_id.h"
 #include "detect_friend/FriendsInfos.h"
-#include "friendmatcher.h"
 #include <sensor_msgs/image_encodings.h>
 
 
@@ -23,23 +22,28 @@ DetectFriend::DetectFriend(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     m_cameraSub = m_nodeHandle.subscribe("/camera/rgb/image_raw", 1, &DetectFriend::cameraSubCallback, this);
     ros::Rate loopRate(10);
     while (ros::ok() && m_cameraSub.getNumPublishers() <= 0)
-    loopRate.sleep();
-    star_image= cv::imread( "/.......dir",1);
-    mushroom_image= cv::imread( "/.......dir",1);
-    coin_image= cv::imread( "/.......dir",1);
+        loopRate.sleep();
+
+    std::string packagePath = "~";
+    if (!m_nodeHandle.getParam("package_path", packagePath))
+       ROS_WARN("The package path is not set, it will default to '~'.");
+    
+    star_image= cv::imread( packagePath + "/star-ref.png");
+    mushroom_image= cv::imread(packagePath + "/mushroom-ref.png");
+    coin_image= cv::imread(packagePath + "/coin-ref.png");
     if( !star_image.data || !mushroom_image.data || !coin_image.data )
     {
         ROS_INFO("EMPTY IMAGE");
+        ROS_INFO("%s", (packagePath + "/coin-ref.png").c_str());
     }
     ROS_INFO("Creating friend's topic...");
     m_friend_idPub = m_nodeHandle.advertise<detect_friend::FriendsInfos>("/friendinfo", 10);
-    Scalar yellowstar(0,255, 255);
-    Scalar redmushroom(0,0,255);
-    Scalar yellowcoin(32,215,247);
+    Scalar yellowstar(255, 255, 0);
+    Scalar redmushroom(255, 0, 0);
+    Scalar yellowcoin(247,215,32);
     FriendMatcher::TemplateInfo star;
     FriendMatcher::TemplateInfo mushroom;
     FriendMatcher::TemplateInfo coin;
-    FriendMatcher friendmatcher;
 
     ROS_INFO("Set template infos");
 
@@ -53,7 +57,7 @@ DetectFriend::DetectFriend(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     star.roi.y=30;
     star.roi.width=390;
     star.roi.height=420;
-
+    m_friendmatcher.addTemplate(star);
 
     mushroom.image=mushroom_image;
     mushroom.id=1;
@@ -65,11 +69,11 @@ DetectFriend::DetectFriend(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     mushroom.roi.y=30;
     mushroom.roi.width=420;
     mushroom.roi.height=300;
-    friendmatcher.addTemplate(mushroom);
+    m_friendmatcher.addTemplate(mushroom);
 
     coin.image=coin_image;
     coin.id=2;
-    coin.mainColor=yellowcoin;
+    coin.mainColor=yellowstar;
     coin.name="Coin";
     coin.w=0.2;
     coin.h=0.27;
@@ -77,7 +81,7 @@ DetectFriend::DetectFriend(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     coin.roi.y=60;
     coin.roi.width=270;
     coin.roi.height=390;
-    friendmatcher.addTemplate(coin);
+    m_friendmatcher.addTemplate(coin);
 
     ROS_INFO("Done, everything's ready.");
 }
@@ -90,7 +94,6 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     detect_friend::FriendsInfos friends;
     detect_friend::Friend_id id_friend;
     Mat img;
-    FriendMatcher friendmatcher;
 
     try
     {
@@ -109,29 +112,40 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     }
 
      //objects ids: 0 for star, 1 for mushroom, 2 for coin
-      FriendMatcher::MatchResult result1= friendmatcher.match(img, 0);
-      FriendMatcher::MatchResult result2= friendmatcher.match(img, 1);
-      FriendMatcher::MatchResult result3= friendmatcher.match(img, 2);
+      FriendMatcher::MatchResult result1= m_friendmatcher.match(img, 0);
+      FriendMatcher::MatchResult result2= m_friendmatcher.match(img, 1);
+      FriendMatcher::MatchResult result3= m_friendmatcher.match(img, 2);
 
       if (result1.score>min_score)
       {
         id_friend.id=0;
         friends.infos.push_back(id_friend);
+        /*cv::Mat display = m_friendmatcher.drawResult(img, result1);
+        cv::imshow("Result1", display);
+        cv::waitKey(1);*/
       }
 
       if (result2.score>min_score)
       {
-        id_friend.id=0;
+        id_friend.id=1;
         friends.infos.push_back(id_friend);
+        /*cv::Mat display = m_friendmatcher.drawResult(img, result2);
+        cv::imshow("Result2", display);
+        cv::waitKey(1);*/
       }
 
       if (result3.score>min_score)
       {
-        id_friend.id=0;
+        id_friend.id=2;
         friends.infos.push_back(id_friend);
+        /*cv::Mat display = m_friendmatcher.drawResult(img, result3);
+        cv::imshow("Result3", display);
+        cv::waitKey(1);*/
       }
-
+        
       m_friend_idPub.publish(friends);
+
+      
 
 
 

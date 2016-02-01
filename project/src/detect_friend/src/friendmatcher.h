@@ -35,6 +35,7 @@ class FriendMatcher
         static const double DILATATION_FACTOR = 25 / 480.0;
         
         static cv::Mat applyLogFilter(const cv::Mat& img);
+        static cv::Mat binarizeImage(const cv::Mat& img, double threshold, double maxVal);
         static cv::Mat binarizeImageKMeans(const cv::Mat& img);
         static cv::Mat removeIsolatedPixels(const cv::Mat& binImg, int nbMinNeighbours);
         static MatchResult compareBinaryImages(const cv::Mat& binImg1, const cv::Mat& binImg2);
