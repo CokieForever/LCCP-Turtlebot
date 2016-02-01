@@ -96,16 +96,21 @@ cv::Mat FriendMatcher::binarizeImageKMeans(const cv::Mat& img)
     return labels.reshape(0, img.rows);
 }
 
+cv::Scalar FriendMatcher::convertToLabSpace(const cv::Scalar& color)
+{
+    cv::Mat matColor = cv::Mat::zeros(1, 1, CV_32FC3);
+    matColor.at<cv::Vec3f>(0,0) = cv::Vec3f(color[0]/255.0, color[1]/255.0, color[2]/255.0);
+    cv::cvtColor(matColor, matColor, CV_RGB2Lab);
+    cv::Vec3f colorVec = matColor.at<cv::Vec3f>(0,0);
+    return cv::Scalar(colorVec[0], colorVec[1], colorVec[2]);
+}
+
 cv::Mat FriendMatcher::computeDistanceImage(const cv::Mat& img, cv::Scalar color)
 {
     cv::Mat imgCopy = img.clone();    
     imgCopy.convertTo(imgCopy, CV_32F, 1/255.0);
     
-    cv::Mat matColor = cv::Mat::zeros(1, 1, CV_32FC3);
-    matColor.at<cv::Vec3f>(0,0) = cv::Vec3f(color[0]/255.0, color[1]/255.0, color[2]/255.0);
-    cv::cvtColor(matColor, matColor, CV_RGB2Lab);
-    cv::Vec3f colorVec = matColor.at<cv::Vec3f>(0,0);
-    color = cv::Scalar(colorVec[0], colorVec[1], colorVec[2]);
+    color = convertToLabSpace(color);
     
     cv::cvtColor(imgCopy, imgCopy, CV_BGR2Lab);
     
