@@ -9,15 +9,10 @@ class FriendMatcher
         
         static const double MARKER_REF_DIST = 480 * 0.2 / 0.175;
         
-        struct Rectangle
-        {
-            cv::Point ul, lr;
-        };
-        
         struct TemplateInfo
         {
             cv::Mat image;
-            Rectangle roi;
+            cv::Rect roi;
             cv::Scalar mainColor;
             double h, w;
             std::string name;
@@ -27,7 +22,7 @@ class FriendMatcher
         struct MatchResult
         {
             double score;
-            Rectangle boundingRect;
+            cv::Rect boundingRect;
             cv::Mat colorDiffImg;
         };            
         
@@ -40,13 +35,14 @@ class FriendMatcher
         static const double DILATATION_FACTOR = 25 / 480.0;
         
         static cv::Mat applyLogFilter(const cv::Mat& img);
+        static cv::Mat binarizeImage(const cv::Mat& img, double threshold, double maxVal);
         static cv::Mat binarizeImageKMeans(const cv::Mat& img);
         static cv::Mat removeIsolatedPixels(const cv::Mat& binImg, int nbMinNeighbours);
         static MatchResult compareBinaryImages(const cv::Mat& binImg1, const cv::Mat& binImg2);
         
         std::vector<TemplateInfo> m_templates;
         
-        std::vector<Rectangle> getImageRects(const cv::Mat& img) const;
-        MatchResult matchPerspective(const cv::Mat& aFullImg, const std::vector<Rectangle>& rects, const TemplateInfo& templ) const;
+        std::vector<cv::Rect> getImageRects(const cv::Mat& img, cv::Scalar scalarcolor) const;
+        MatchResult matchPerspective(const cv::Mat& aFullImg, const std::vector<cv::Rect>& rects, const TemplateInfo& templ) const;
 };
       

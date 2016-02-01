@@ -24,7 +24,6 @@ class DetectMarker
         
         static bool ComputeLinesIntersection(Point linePoints1[2], Point linePoints2[2], Point *isectPoint);
         static bool ComputeQuadrilateralCenter(Point points[4], Point *centerPoint);
-        
         bool m_isRotating;
         ros::NodeHandle& m_nodeHandle;
         ros::Subscriber m_cameraSub;

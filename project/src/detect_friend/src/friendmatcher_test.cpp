@@ -6,7 +6,7 @@
 
 int main( int argc, char** argv )
 {
-    ros::init(argc, argv, "orb_test");
+    ros::init(argc, argv, "friendmatcher_test");
     ros::NodeHandle node("~");
     ROS_INFO("Initialized ROS.");
     
@@ -41,10 +41,10 @@ int main( int argc, char** argv )
     FriendMatcher matcher;    
     FriendMatcher::TemplateInfo templateInfo;
     templateInfo.image = img_object;
-    templateInfo.roi.ul.x = 29;
-    templateInfo.roi.ul.y = 28;
-    templateInfo.roi.lr.x = 29+354;
-    templateInfo.roi.lr.y = 28+379;
+    templateInfo.roi.x = 29;
+    templateInfo.roi.y = 28;
+    templateInfo.roi.width = 354;
+    templateInfo.roi.height = 379;
     templateInfo.mainColor = cv::Scalar(255, 237, 0);
     templateInfo.h = 0.09;
     templateInfo.w = 0.09;
@@ -60,8 +60,8 @@ int main( int argc, char** argv )
         return 0;
     }
     
-    ROS_INFO("Corner 1: %d, %d", result.boundingRect.ul.x, result.boundingRect.ul.y);
-    ROS_INFO("Corner 2: %d, %d", result.boundingRect.lr.x, result.boundingRect.lr.y);
+    ROS_INFO("Corner 1: %d, %d", result.boundingRect.x, result.boundingRect.y);
+    ROS_INFO("Corner 2: %d, %d", result.boundingRect.br().x, result.boundingRect.br().y);
     ROS_INFO("Score: %.2f%%", result.score*100);
     
     cv::Mat display = matcher.drawResult(img_scene, result);

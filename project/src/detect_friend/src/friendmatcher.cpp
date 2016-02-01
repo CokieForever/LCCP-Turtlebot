@@ -40,10 +40,13 @@ FriendMatcher::MatchResult FriendMatcher::match(const cv::Mat& img, int template
     {
         if (it->id == templateId)
         {
-            std::vector<Rectangle> rects = getImageRects(img);
+            std::vector<cv::Rect> rects = getImageRects(img, it->mainColor);
+            //ROS_INFO("Number of rects: %lu", rects.size());
             return matchPerspective(img, rects, *it);
         }
     }
+
+    ROS_WARN("Template #%d not found.", templateId);
     
     MatchResult result;
     result.score = -1;
@@ -58,16 +61,24 @@ cv::Mat FriendMatcher::drawResult(const cv::Mat& img, const MatchResult& result)
     else
         colorImg = img.clone();
     
-    cv::rectangle(colorImg, result.boundingRect.ul , result.boundingRect.lr, cv::Scalar(0, 255, 0), 2);
+    cv::rectangle(colorImg, result.boundingRect.tl() , result.boundingRect.br(), cv::Scalar(0, 255, 0), 2);
     
-    cv::Mat fullDisplay, colorDiffImg = result.colorDiffImg.clone();
-    if (colorDiffImg.rows < colorImg.rows)
-        copyMakeBorder(colorDiffImg, colorDiffImg, 0, colorImg.rows-colorDiffImg.rows, 0, 0, cv::BORDER_CONSTANT);
-    else if (colorImg.rows < colorDiffImg.rows)
-        copyMakeBorder(colorImg, colorImg, 0, colorDiffImg.rows-colorImg.rows, 0, 0, cv::BORDER_CONSTANT);
-    
-    cv::hconcat(colorImg, colorDiffImg, fullDisplay);
-    return fullDisplay;
+    if (result.score >= 0)
+    {
+        cv::Mat fullDisplay, colorDiffImg = result.colorDiffImg.clone();
+        if (colorDiffImg.rows < colorImg.rows)
+            copyMakeBorder(colorDiffImg, colorDiffImg, 0, colorImg.rows-colorDiffImg.rows, 0, 0, cv::BORDER_CONSTANT);
+        else if (colorImg.rows < colorDiffImg.rows)
+            copyMakeBorder(colorImg, colorImg, 0, colorDiffImg.rows-colorImg.rows, 0, 0, cv::BORDER_CONSTANT);
+        
+        //ROS_INFO("h1 = %d, h2 = %d", colorImg.rows, colorDiffImg.rows);
+        //ROS_INFO("type1 = %d, type2 = %d", colorImg.type(), colorDiffImg.type());
+        
+        cv::hconcat(colorImg, colorDiffImg, fullDisplay);
+        return fullDisplay;
+    }
+    else
+        return colorImg;
 }
 
 cv::Mat FriendMatcher::applyLogFilter(const cv::Mat& img)
@@ -84,12 +95,20 @@ cv::Mat FriendMatcher::applyLogFilter(const cv::Mat& img)
     return filteredImg;
 }
 
+cv::Mat FriendMatcher::binarizeImage(const cv::Mat& img, double threshold, double maxVal)
+{
+    cv::Mat binImg;
+    cv::threshold(img, binImg, threshold, maxVal, cv::THRESH_BINARY);
+    return binImg;
+}
+
+
 cv::Mat FriendMatcher::binarizeImageKMeans(const cv::Mat& img)
 {
     cv::Mat points = img.clone().reshape(0, img.cols*img.rows);
     points.convertTo(points, CV_32F, 1/255.0);
     cv::Mat labels;
-    cv::kmeans(points, 2, labels, cv::TermCriteria( cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 10, 1.0), 6, cv::KMEANS_PP_CENTERS);
+    cv::kmeans(points, 2, labels, cv::TermCriteria( cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 1000, 0.01), 1, cv::KMEANS_PP_CENTERS);
     if (cv::sum(labels)[0] > img.cols*img.rows/2)
         labels = 1 - labels;
     labels.convertTo(labels, CV_8U, 255);
@@ -144,6 +163,101 @@ cv::Mat FriendMatcher::removeIsolatedPixels(const cv::Mat& binImg, int nbMinNeig
     return output;
 }
 
+
+std::vector<cv::Rect> FriendMatcher::getImageRects(const cv::Mat& img, cv::Scalar scalarcolor) const
+{
+  cv::Scalar scalarcolor2 = convertToLabSpace(scalarcolor);
+  std::vector<std::vector<cv::Point> > contours;
+  std::vector<cv::Vec4i> hierarchy;
+  double area;
+  cv::Mat image_object, image_object2;
+  cv::Mat image_scene;
+  cv::Mat image_scene2;
+  std::vector<cv::Mat> rgb1;
+  cv::Mat add_res, add_res2, euclidean1, euclidean2;
+  cv::Mat imgCopysc=img.clone();
+  imgCopysc.convertTo(imgCopysc, CV_32FC3, 1/255.0);
+  cv::cvtColor(imgCopysc, imgCopysc, CV_BGR2Lab);
+
+  //Calculate the absolute difference between the scalar and the image
+  cv::absdiff(imgCopysc, scalarcolor2, image_scene);
+
+ //Calculate the pow
+   cv::pow(image_scene, 2, image_scene2);
+
+ //Split the channels in order to calculate the sum
+   cv::split(image_scene2, rgb1);
+   add_res=rgb1[0]+rgb1[1]+rgb1[2];
+ //sgrt of the sum. Final DIstance
+   cv::sqrt(add_res, euclidean1);
+ //normalization accordint to maximum distance
+   euclidean1=(euclidean1/372.87);
+
+   cv::Mat scene, obj;
+
+   //Set the pixels with euclidean distance from the scalar <0.15
+
+   cv::threshold(euclidean1, scene, 0.20, 1, cv::THRESH_BINARY_INV);
+   /*cv::imshow("Scene", scene);
+   cv::waitKey(1);*/
+
+  //find contours in the image.
+  cv::Mat euclideanCopy2=scene.clone();
+  euclideanCopy2.convertTo(euclideanCopy2, CV_8U, 255);
+  cv::Mat aFullImgCopy = euclideanCopy2.clone();
+
+  cv::findContours( euclideanCopy2, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cv::Point(0, 0) );
+
+  //ignore the black contours
+  for(int i=0; i<contours.size(); i++)
+   {
+    if (cv::contourArea(contours[i],true) > 0)
+      {
+       //ROS_INFO("black");
+       contours.erase(contours.begin() + i);
+       hierarchy.erase(hierarchy.begin()+i);
+       i--;
+      }
+    else
+      {
+        //ROS_INFO("white");
+      }
+  }
+
+  //ROS_INFO("contour size %lu", contours.size() );
+  std::vector<std::vector<cv::Point> > contours_poly( contours.size() );
+  std::vector<cv::Rect> boundRect;
+
+  //create rectangles around contours of interest and draw
+  for( int i = 0; i < contours.size(); i++ )
+    {
+      cv::approxPolyDP( cv::Mat(contours[i]), contours_poly[i], 3, true );
+      area=cv::contourArea(contours_poly[i]);
+      //ROS_INFO("area %.3f", area );
+      //ignore the contours that have area less than 10*10
+      if (area<100)
+        {
+         contours.erase(contours.begin() + i);
+         hierarchy.erase(hierarchy.begin()+i);
+         i--;
+        }
+      else
+        {
+          cv::Rect rect = cv::boundingRect( cv::Mat(contours_poly[i]) );
+         boundRect.push_back(rect);
+        
+        cv::rectangle(aFullImgCopy, rect.tl(), rect.br(), cv::Scalar(255,255,255), 2);
+        }
+    }
+
+    /*cv::imshow("Rects", aFullImgCopy);
+    cv::waitKey(1);*/
+
+ return boundRect;
+
+
+}
+
 FriendMatcher::MatchResult FriendMatcher::compareBinaryImages(const cv::Mat& binImg1, const cv::Mat& binImg2)
 {
     cv::Mat binImg1Copy = removeIsolatedPixels(binImg1, 2);
@@ -171,70 +285,49 @@ FriendMatcher::MatchResult FriendMatcher::compareBinaryImages(const cv::Mat& bin
     return result;
 }
 
-std::vector<FriendMatcher::Rectangle> FriendMatcher::getImageRects(const cv::Mat& img) const
-{
-    std::vector<Rectangle> vec;
-    Rectangle rect;
-    
-    //test7.png
-    /*rect.ul.x = 108;
-    rect.ul.y = 215;
-    rect.lr.x = 134;
-    rect.lr.y = 291;*/
-    
-    //test4.png
-    /*rect.ul.x = 292;
-    rect.ul.y = 203;
-    rect.lr.x = 377;
-    rect.lr.y = 295;*/
-    
-    //test3.png
-    rect.ul.x = 350;
-    rect.ul.y = 209;
-    rect.lr.x = 396;
-    rect.lr.y = 254;
-    
-    vec.push_back(rect);
-    return vec;
-}
 
-FriendMatcher::MatchResult FriendMatcher::matchPerspective(const cv::Mat& aFullImg, const std::vector<FriendMatcher::Rectangle>& rects, const FriendMatcher::TemplateInfo& templ) const
+
+
+
+FriendMatcher::MatchResult FriendMatcher::matchPerspective(const cv::Mat& aFullImg, const std::vector<cv::Rect>& rects, const FriendMatcher::TemplateInfo& templ) const
 {
     MatchResult bestResult;
     bestResult.score = -1;
     
-    for (std::vector<Rectangle>::const_iterator it = rects.begin() ; it != rects.end() ; it++)
+    for (std::vector<cv::Rect>::const_iterator it = rects.begin() ; it != rects.end() ; it++)
     {
-        Rectangle lRectImg = *it;
-        Rectangle lRectTemplate = templ.roi;
+        cv::Rect lRectImg = *it;
+        cv::Rect lRectTemplate = templ.roi;
         int iw = aFullImg.cols, ih = aFullImg.rows;
         int tw = templ.image.cols, th = templ.image.rows;
+        //ROS_INFO("iw = %d, ih = %d", iw, ih);
+        //ROS_INFO("tw = %d, th = %d", tw, th);
+
+        //ROS_INFO("lRectImg = (%d, %d) (%d, %d)", lRectImg.tl().x, lRectImg.tl().y, lRectImg.br().x, lRectImg.br().y);
+        //ROS_INFO("lRectTemplate = (%d, %d) (%d, %d)", lRectTemplate.tl().x, lRectTemplate.tl().y, lRectTemplate.br().x, lRectTemplate.br().y);
         
-        ROS_INFO("lRectImg = (%d, %d) (%d, %d)", lRectImg.ul.x, lRectImg.ul.y, lRectImg.lr.x, lRectImg.lr.y);
-        ROS_INFO("lRectTemplate = (%d, %d) (%d, %d)", lRectTemplate.ul.x, lRectTemplate.ul.y, lRectTemplate.lr.x, lRectTemplate.lr.y);
+        double fScaleX = (lRectImg.br().x - lRectImg.tl().x) / (double)(lRectTemplate.br().x - lRectTemplate.tl().x);
+        double fScaleY = (lRectImg.br().y - lRectImg.tl().y) / (double)(lRectTemplate.br().y - lRectTemplate.tl().y);
+        //ROS_INFO("fScaleX = %.3f, fScaleY = %.3f", fScaleX, fScaleY);
         
-        double fScaleX = (lRectImg.lr.x - lRectImg.ul.x) / (double)(lRectTemplate.lr.x - lRectTemplate.ul.x);
-        double fScaleY = (lRectImg.lr.y - lRectImg.ul.y) / (double)(lRectTemplate.lr.y - lRectTemplate.ul.y);
-        ROS_INFO("fScaleX = %.3f, fScaleY = %.3f", fScaleX, fScaleY);
-        
-        double fDistanceZ = templ.h * MARKER_REF_DIST / (lRectImg.lr.y - lRectImg.ul.y);
+        double fDistanceZ = templ.h * MARKER_REF_DIST / (lRectImg.br().y - lRectImg.tl().y);
         double fMinBackScale = fDistanceZ / (fDistanceZ + templ.h);
         double fRotY = acos(std::min(1.0, fScaleX / fScaleY));
-        ROS_INFO("fDistanceZ = %.3f, fMinBackScale = %.3f, fRotY = %.3f", fDistanceZ, fMinBackScale, fRotY*180/M_PI);
+        //ROS_INFO("fDistanceZ = %.3f, fMinBackScale = %.3f, fRotY = %.3f", fDistanceZ, fMinBackScale, fRotY*180/M_PI);
         
-        Rectangle lCropRect;
-        lCropRect.ul.x = std::max(0, lRectImg.ul.x - (int)ceil(lRectTemplate.ul.x * fScaleX));
-        lCropRect.ul.y = std::max(0, lRectImg.ul.y - (int)ceil(lRectTemplate.ul.y * fScaleY));
-        lCropRect.lr.x = std::min(iw, lRectImg.lr.x + (int)ceil((tw-lRectTemplate.lr.x) * fScaleX));
-        lCropRect.lr.y = std::min(ih, lRectImg.lr.y + (int)ceil((th-lRectTemplate.lr.y) * fScaleY));
-        ROS_INFO("lCropRect = (%d, %d) (%d, %d)", lCropRect.ul.x, lCropRect.ul.y, lCropRect.lr.x, lCropRect.lr.y);
+        cv::Rect lCropRect;
+        lCropRect.x = std::max(0, lRectImg.tl().x - (int)ceil(lRectTemplate.tl().x * fScaleX));
+        lCropRect.y = std::max(0, lRectImg.tl().y - (int)ceil(lRectTemplate.tl().y * fScaleY));
+        lCropRect.width = std::min(iw - lCropRect.x, (int)round(tw * fScaleX));
+        lCropRect.height = std::min(ih - lCropRect.y, (int)round(th * fScaleY));
+        //ROS_INFO("lCropRect = (%d, %d) (%d, %d)", lCropRect.tl().x, lCropRect.tl().y, lCropRect.br().x, lCropRect.br().y);
         
-        cv::Mat aImg = aFullImg(cv::Rect(lCropRect.ul.x, lCropRect.ul.y, lCropRect.lr.x-lCropRect.ul.x, lCropRect.lr.y-lCropRect.ul.y));
+        cv::Mat aImg = aFullImg(cv::Rect(lCropRect.tl().x, lCropRect.tl().y, lCropRect.br().x-lCropRect.tl().x, lCropRect.br().y-lCropRect.tl().y));
         iw = aImg.cols;
         ih = aImg.rows;
         
         cv::Mat aTemplate;
-        ROS_INFO("w = %d ; h = %d", iw, ih);
+        //ROS_INFO("w = %d ; h = %d", iw, ih);
         cv::resize(templ.image, aTemplate, cv::Size(iw,ih), 0, 0, cv::INTER_NEAREST);
         tw = aTemplate.cols;
         th = aTemplate.rows;
@@ -248,6 +341,8 @@ FriendMatcher::MatchResult FriendMatcher::matchPerspective(const cv::Mat& aFullI
         }
         
         cv::Mat aBinImg = binarizeImageKMeans(applyLogFilter(aImg));
+        /*cv::imshow("bin", aBinImg);
+        cv::waitKey(1);*/
         
         double fBestDiff = std::numeric_limits<double>::infinity();
         const double fAngleMargin = 10 * M_PI / 180;

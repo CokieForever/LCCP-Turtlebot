@@ -1,0 +1,8 @@
+<launch>
+    <node name="detect_friend" type="detect_friend" pkg="detect_friend" output="screen">
+        <param name="package_path" type="string" value="$(find detect_friend)" />
+    </node>
+    <node type="imagebroadcast" name="imagebroadcast" pkg="detect_marker" output="screen">
+        <param name="videofile_path" value="$(find detect_friend)/test7.jpg" type="string" />
+    </node>
+</launch>
