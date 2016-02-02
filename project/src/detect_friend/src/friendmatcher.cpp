@@ -347,7 +347,7 @@ FriendMatcher::MatchResult FriendMatcher::matchPerspective(const cv::Mat& aFullI
         double fBestDiff = std::numeric_limits<double>::infinity();
         const double fAngleMargin = 10 * M_PI / 180;
         const double fAngleStep = 5 * M_PI / 180;
-        for (double fAngleY = fRotY - fAngleMargin ; fAngleY <= fRotY + fAngleMargin ; fAngleY += fAngleStep)
+        for (double fAngleY = fRotY - fAngleMargin ; fAngleY <= fRotY + fAngleMargin && fabs(fAngleY) <= 20 * M_PI / 180 ; fAngleY += fAngleStep)
         {
             double x = cos(fAngleY);
             double fBackScale = x * (1-fMinBackScale) + fMinBackScale;

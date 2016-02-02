@@ -522,8 +522,8 @@ class DeadReckoning
                     m_offsetY = m_position.y - odom->pose.pose.position.y;
                     m_offsetZOdom = m_position.z - angle;
                 }
-                m_position.x = odom->pose.pose.position.x * cos(m_offsetZOdom) + odom->pose.pose.position.y * sin(m_offsetZOdom) + m_offsetX;
-                m_position.y = -odom->pose.pose.position.x * sin(m_offsetZOdom) + odom->pose.pose.position.y * cos(m_offsetZOdom) + m_offsetY;
+                m_position.x = odom->pose.pose.position.x * cos(m_offsetZOdom) - odom->pose.pose.position.y * sin(m_offsetZOdom) + m_offsetX;
+                m_position.y = odom->pose.pose.position.x * sin(m_offsetZOdom) + odom->pose.pose.position.y * cos(m_offsetZOdom) + m_offsetY;
                 m_position.t = odom->header.stamp;
                 
                 m_positionsHist[m_positionsHistIdx] = m_position;
@@ -836,15 +836,15 @@ class DeadReckoning
             
             if ((m_friendSurf[0] = loadImg(packagePath + "/star_small.png")) == NULL)
                 return false;
-            if ((m_friendSurf[1] = loadImg(packagePath + "/coin_small.png")) == NULL)
+            if ((m_friendSurf[2] = loadImg(packagePath + "/coin_small.png")) == NULL)
                 return false;
-            if ((m_friendSurf[2] = loadImg(packagePath + "/mushroom_small.png")) == NULL)
+            if ((m_friendSurf[1] = loadImg(packagePath + "/mushroom_small.png")) == NULL)
                 return false;
             if ((m_friendSurfTransparent[0] = loadImg(packagePath + "/star_small_tr.png")) == NULL)
                 return false;
-            if ((m_friendSurfTransparent[1] = loadImg(packagePath + "/coin_small_tr.png")) == NULL)
+            if ((m_friendSurfTransparent[2] = loadImg(packagePath + "/coin_small_tr.png")) == NULL)
                 return false;
-            if ((m_friendSurfTransparent[2] = loadImg(packagePath + "/mushroom_small_tr.png")) == NULL)
+            if ((m_friendSurfTransparent[1] = loadImg(packagePath + "/mushroom_small_tr.png")) == NULL)
                 return false;
             
             m_gridSurf = SDL_CreateRGBSurface(SDL_HWSURFACE, SCREEN_WIDTH, SCREEN_HEIGHT, 32,0,0,0,0);
@@ -916,9 +916,9 @@ class DeadReckoning
             {
                 if (isnan(m_friendsPos[i].x) || isnan(m_friendsPos[i].y))
                     continue;
-                convertPosToDisplayCoord(m_markersPos[i].x, m_markersPos[i].y, x, y);
-                rect.x = x-m_markerSurf->w/2;
-                rect.y = y-m_markerSurf->h/2;
+                convertPosToDisplayCoord(m_friendsPos[i].x, m_friendsPos[i].y, x, y);
+                rect.x = x-m_friendSurf[i]->w/2;
+                rect.y = y-m_friendSurf[i]->h/2;
                 SDL_BlitSurface(m_friendInSight[i] ? m_friendSurf[i] : m_friendSurfTransparent[i], NULL, m_screen, &rect);
             }
             

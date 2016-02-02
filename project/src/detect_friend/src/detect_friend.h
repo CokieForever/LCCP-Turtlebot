@@ -17,7 +17,7 @@ class DetectFriend
     public:
         DetectFriend(ros::NodeHandle& nodeHandle);
 	void Identification();
-        const static double min_score =0.7;
+        const static double min_score =0.85;
         static const double FRIEND_REF_DIST = 480 * 0.2 / 0.175;
         static const double COIN_HEIGHT = 0.1785;
 	static const double MUSHROOM_HEIGHT=0.1785;
