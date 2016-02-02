@@ -129,10 +129,6 @@ void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
                     else if (j == 2)
                         tile = binarizeImage(tile, false);
                     
-                    /*snprintf(frameName, 100, "Frame %d [%d]", i, j);
-                    cv::imshow(frameName, tile);
-                    cv::waitKey(1);*/
-                    
                     detector.detect(tile, newMarkers);
                     for (std::vector<aruco::Marker>::iterator subIt = newMarkers.begin() ; subIt != newMarkers.end() ; subIt++)
                     {

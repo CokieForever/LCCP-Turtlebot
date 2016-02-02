@@ -12,6 +12,8 @@
 #include "dead_reckoning/Grid.h"
 #include "detect_marker/MarkerInfo.h"
 #include "detect_marker/MarkersInfos.h"
+#include "detect_friend/Friend_id.h"
+#include "detect_friend/FriendsInfos.h"
 #include "sdl_gfx/SDL_rotozoom.h"
 #include "nav_msgs/Odometry.h"
 
@@ -394,9 +396,11 @@ class DeadReckoning
         static const std::string SCANGRIDPOS_TRANSFORM_NAME;
         static const std::string DEPTHGRIDPOS_TRANSFORM_NAME;
         static const std::string MARKERPOS_TRANSFORM_NAME;
+        static const std::string FRIENDPOS_TRANSFORM_NAME;
         static const double MARKER_SIZE;
         static const double MARKER_REF_DIST;
         static const int SIZE_POSITIONS_HIST;
+        static const int NB_FRIENDS;
         
         static double modAngle(double rad)
         {
@@ -410,7 +414,7 @@ class DeadReckoning
         ros::Subscriber m_depthSub;
         ros::Subscriber m_imuSub;
         ros::Subscriber m_localMapScanSub, m_localMapDepthSub;
-        ros::Subscriber m_markersSub;
+        ros::Subscriber m_markersSub, m_friendsSub;
         ros::Publisher m_laserScanPub, m_laserDepthPub;
         ros::Publisher m_scanGridPub, m_depthGridPub;
         double *m_scanRanges, *m_depthRanges;
@@ -419,7 +423,7 @@ class DeadReckoning
         StampedPos m_position;
         StampedPos *m_positionsHist;
         int m_positionsHistIdx;
-        double m_offsetX, m_offsetY, m_offsetZ;
+        double m_offsetX, m_offsetY, m_offsetZ, m_offsetZOdom;
         double m_linearSpeed;
         double m_angularSpeed;
         Vector *m_scanCloudPoints, *m_depthCloudPoints;
@@ -427,11 +431,14 @@ class DeadReckoning
         Grid m_scanGrid, m_depthGrid;
         SDL_Surface *m_screen;
         SDL_Surface *m_robotSurf, *m_markerSurf, *m_markerSurfTransparent;
+        SDL_Surface **m_friendSurf, **m_friendSurfTransparent;
         SDL_Surface *m_gridSurf;
         double m_minX, m_maxX, m_minY, m_maxY;
         tf::TransformBroadcaster m_transformBroadcaster;
         StampedPos m_markersPos[256];
         bool m_markerInSight[256];
+        StampedPos *m_friendsPos;
+        bool *m_friendInSight;
         
         StampedPos getPosForTime(const ros::Time& time)
         {
@@ -453,13 +460,33 @@ class DeadReckoning
             return prevPos;
         }
         
+        void friendsCallback(const detect_friend::FriendsInfos::ConstPtr& friendsInfos)
+        {
+            for (int i=0 ; i < NB_FRIENDS ; i++)
+                m_friendInSight[i] = false;
+            for (std::vector<detect_friend::Friend_id>::const_iterator it = friendsInfos->infos.begin() ; it != friendsInfos->infos.end() ; it++)
+            {
+                if (it->id < 0 || it->id >= NB_FRIENDS)
+                    continue;
+                double angle = -atan(it->dx / it->dz);
+                double d = hypot(it->dx, it->dz);
+                
+                StampedPos pos = getPosForTime(it->Time);
+                angle += pos.z;
+                m_friendsPos[it->id].x = d * cos(angle) + pos.x;
+                m_friendsPos[it->id].y = d * sin(angle) + pos.y;
+                m_friendsPos[it->id].t = it->Time;
+                m_friendInSight[it->id] = true;
+            }
+        }
+        
         void markersCallback(const detect_marker::MarkersInfos::ConstPtr& markersInfos)
         {
             for (int i=0 ; i < 256 ; i++)
                 m_markerInSight[i] = false;
             for (std::vector<detect_marker::MarkerInfo>::const_iterator it = markersInfos->infos.begin() ; it != markersInfos->infos.end() ; it++)
             {
-                if (it->id < 0 || it->id > 255)
+                if (it->id < 0 || it->id >= 256)
                     continue;
                 double angle = -atan(it->dx / it->dz);
                 double d = hypot(it->dx, it->dz);
@@ -488,13 +515,15 @@ class DeadReckoning
         {
             if (!m_simulation)
             {
-                if (isnan(m_offsetX) || isnan(m_offsetY))
+                double angle = 2*asin(odom->pose.pose.orientation.z);
+                if (isnan(m_offsetX) || isnan(m_offsetY) || isnan(m_offsetZOdom))
                 {
                     m_offsetX = m_position.x - odom->pose.pose.position.x;
                     m_offsetY = m_position.y - odom->pose.pose.position.y;
+                    m_offsetZOdom = m_position.z - angle;
                 }
-                m_position.x = odom->pose.pose.position.x + m_offsetX;
-                m_position.y = odom->pose.pose.position.y + m_offsetY;
+                m_position.x = odom->pose.pose.position.x * cos(m_offsetZOdom) - odom->pose.pose.position.y * sin(m_offsetZOdom) + m_offsetX;
+                m_position.y = odom->pose.pose.position.x * sin(m_offsetZOdom) + odom->pose.pose.position.y * cos(m_offsetZOdom) + m_offsetY;
                 m_position.t = odom->header.stamp;
                 
                 m_positionsHist[m_positionsHistIdx] = m_position;
@@ -730,6 +759,25 @@ class DeadReckoning
             }
         }
         
+        void publishFriendsTransforms()
+        {
+            tf::Transform transform;
+            tf::Quaternion q;
+            char transformName[100];
+            
+            q.setRPY(0, 0, 0);
+            transform.setRotation(q);
+                
+            for (int i=0 ; i < NB_FRIENDS ; i++)
+            {
+                if (isnan(m_friendsPos[i].x) || isnan(m_friendsPos[i].y))
+                    continue;
+                snprintf(transformName, 100, "%s_%d", FRIENDPOS_TRANSFORM_NAME.c_str(), i);
+                transform.setOrigin( tf::Vector3(m_friendsPos[i].x, m_friendsPos[i].y, 0.0) );
+                m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", transformName));
+            }
+        }
+        
         void publishGrid(const Grid& grid, ros::Publisher& pub)
         {
             dead_reckoning::Grid gridMsg;
@@ -775,26 +823,29 @@ class DeadReckoning
             if (!m_node.getParam("package_path", packagePath))
                ROS_WARN("The package path is not set, it will default to '~'.");
 
-            m_robotSurf = IMG_Load((packagePath + "/turtlebot_small.png").c_str());
-            if (!m_robotSurf)
-            {
-                ROS_ERROR("Unable to load the robot bitmap (%s).", (packagePath + "/turtlebot_small.png").c_str());
+            if ((m_robotSurf = loadImg(packagePath + "/turtlebot_small.png")) == NULL)
                 return false;
-            }
+            if ((m_markerSurf = loadImg(packagePath + "/target_small.png")) == NULL)
+                return false;
+            if ((m_markerSurfTransparent = loadImg(packagePath + "/target_small_tr.png")) == NULL)
+                return false;
             
-            m_markerSurf = IMG_Load((packagePath + "/target_small.png").c_str());
-            if (!m_markerSurf)
-            {
-                ROS_ERROR("Unable to load the marker bitmap (%s).", (packagePath + "/target_small.png").c_str());
-                return false;
-            }
+            m_friendSurf = new SDL_Surface*[NB_FRIENDS];
+            m_friendSurfTransparent = new SDL_Surface*[NB_FRIENDS];
+            //TODO check if not NULL
             
-            m_markerSurfTransparent = IMG_Load((packagePath + "/target_small_tr.png").c_str());
-            if (!m_markerSurfTransparent)
-            {
-                ROS_ERROR("Unable to load the transparent marker bitmap (%s).", (packagePath + "/target_small_tr.png").c_str());
+            if ((m_friendSurf[0] = loadImg(packagePath + "/star_small.png")) == NULL)
                 return false;
-            }
+            if ((m_friendSurf[2] = loadImg(packagePath + "/coin_small.png")) == NULL)
+                return false;
+            if ((m_friendSurf[1] = loadImg(packagePath + "/mushroom_small.png")) == NULL)
+                return false;
+            if ((m_friendSurfTransparent[0] = loadImg(packagePath + "/star_small_tr.png")) == NULL)
+                return false;
+            if ((m_friendSurfTransparent[2] = loadImg(packagePath + "/coin_small_tr.png")) == NULL)
+                return false;
+            if ((m_friendSurfTransparent[1] = loadImg(packagePath + "/mushroom_small_tr.png")) == NULL)
+                return false;
             
             m_gridSurf = SDL_CreateRGBSurface(SDL_HWSURFACE, SCREEN_WIDTH, SCREEN_HEIGHT, 32,0,0,0,0);
             if (!m_gridSurf)
@@ -805,6 +856,14 @@ class DeadReckoning
             SDL_SetColorKey(m_gridSurf, SDL_SRCCOLORKEY, SDL_MapRGB(m_gridSurf->format, 0,0,0));
             
             return true;
+        }
+        
+        SDL_Surface* loadImg(std::string path)
+        {
+            SDL_Surface *surf = IMG_Load(path.c_str());
+            if (!surf)
+                ROS_ERROR("Unable to load image \"%s\": %s", path.c_str(), IMG_GetError());
+            return surf;
         }
         
         void updateDisplay()
@@ -851,6 +910,16 @@ class DeadReckoning
                 rect.x = x-m_markerSurf->w/2;
                 rect.y = y-m_markerSurf->h/2;
                 SDL_BlitSurface(m_markerInSight[i] ? m_markerSurf : m_markerSurfTransparent, NULL, m_screen, &rect);
+            }
+            
+            for (int i=0 ; i < NB_FRIENDS ; i++)
+            {
+                if (isnan(m_friendsPos[i].x) || isnan(m_friendsPos[i].y))
+                    continue;
+                convertPosToDisplayCoord(m_friendsPos[i].x, m_friendsPos[i].y, x, y);
+                rect.x = x-m_friendSurf[i]->w/2;
+                rect.y = y-m_friendSurf[i]->h/2;
+                SDL_BlitSurface(m_friendInSight[i] ? m_friendSurf[i] : m_friendSurfTransparent[i], NULL, m_screen, &rect);
             }
             
             convertPosToDisplayCoord(m_position.x, m_position.y, x, y);
@@ -903,6 +972,7 @@ class DeadReckoning
             m_offsetX = nan("");
             m_offsetY = nan("");
             m_offsetZ = nan("");
+            m_offsetZOdom = nan("");
             
             m_positionsHist = new StampedPos[SIZE_POSITIONS_HIST];
             //TODO exception if m_positionsHist == NULL
@@ -919,6 +989,16 @@ class DeadReckoning
                 m_markersPos[i].x = nan("");
                 m_markersPos[i].y = nan("");
                 m_markerInSight[i] = false;
+            }
+            
+            m_friendsPos = new StampedPos[NB_FRIENDS];
+            m_friendInSight = new bool[NB_FRIENDS];
+            //TODO check if not NULL
+            for (int i=0 ; i < NB_FRIENDS ; i++)
+            {
+                m_friendsPos[i].x = nan("");
+                m_friendsPos[i].y = nan("");
+                m_friendInSight[i] = false;
             }
             
             m_scanGrid = Grid(0.05, ros::Duration(120.0), m_minX, m_maxX, m_minY, m_maxY, false);
@@ -1014,6 +1094,12 @@ class DeadReckoning
                 rate.sleep();
             checkRosOk_v();
             
+            m_friendsSub = m_node.subscribe<detect_friend::FriendsInfos>("/friendinfo", 10, &DeadReckoning::friendsCallback, this);
+            ROS_INFO("Waiting for friends infos...");
+            while (ros::ok() && m_friendsSub.getNumPublishers() <= 0)
+                rate.sleep();
+            checkRosOk_v();
+            
             ROS_INFO("Creating grids publishers...");
             m_scanGridPub = m_node.advertise<dead_reckoning::Grid>("/dead_reckoning/scan_grid", 10);
             m_depthGridPub = m_node.advertise<dead_reckoning::Grid>("/dead_reckoning/depth_grid", 10);
@@ -1040,6 +1126,28 @@ class DeadReckoning
                 SDL_FreeSurface(m_markerSurf);
             if (m_markerSurfTransparent != NULL)
                 SDL_FreeSurface(m_markerSurfTransparent);
+            if (m_friendsPos != NULL)
+                delete m_friendsPos;
+            if (m_friendInSight != NULL)
+                delete m_friendInSight;
+            if (m_friendSurf != NULL)
+            {
+                for (int i=0 ; i < NB_FRIENDS ; i++)
+                {
+                    if (m_friendSurf[i] != NULL)
+                        SDL_FreeSurface(m_friendSurf[i]);
+                }
+                delete m_friendSurf;
+            }
+            if (m_friendSurfTransparent != NULL)
+            {
+                for (int i=0 ; i < NB_FRIENDS ; i++)
+                {
+                    if (m_friendSurfTransparent[i] != NULL)
+                        SDL_FreeSurface(m_friendSurfTransparent[i]);
+                }
+                delete m_friendSurfTransparent;
+            }
             IMG_Quit();
             SDL_Quit();
         }
@@ -1056,6 +1164,7 @@ class DeadReckoning
                 updateDisplay();
                 publishTransforms();
                 publishMarkersTransforms();
+                publishFriendsTransforms();
                 rate.sleep();
             }
         }
@@ -1073,9 +1182,11 @@ const std::string DeadReckoning::ROBOTPOS_TRANSFORM_NAME = "deadreckoning_robotp
 const std::string DeadReckoning::SCANGRIDPOS_TRANSFORM_NAME = "deadreckoning_scangridpos";
 const std::string DeadReckoning::DEPTHGRIDPOS_TRANSFORM_NAME = "deadreckoning_depthgridpos";
 const std::string DeadReckoning::MARKERPOS_TRANSFORM_NAME = "deadreckoning_markerpos";
+const std::string DeadReckoning::FRIENDPOS_TRANSFORM_NAME = "deadreckoning_friendpos";
 const double DeadReckoning::MARKER_SIZE = 0.175;
 const double DeadReckoning::MARKER_REF_DIST = 0.20;
 const int DeadReckoning::SIZE_POSITIONS_HIST = 1000;
+const int DeadReckoning::NB_FRIENDS = 3;
 
 int main(int argc, char **argv)
 {
