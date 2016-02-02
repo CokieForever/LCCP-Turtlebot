@@ -10,14 +10,14 @@ Mover::Mover()
     //Variables
     m_keepMoving = true;
     m_gotTarget = false;
-    m_reachedTarget = false;
+    //m_reachedTarget = false;
     m_nextId = 0;
     m_searchMarker = 0;
     m_finishedMarkerSearch = false;
     m_outOfSight = true;
     m_poweredUp = false;
-    //distance between marker and turtlebot
-    m_distanceToMarker = 9999;
+
+    m_distanceToMarker = 9999; //distance between marker and turtlebot
     //Publishers
     commandPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 10);
     targetReachedRequest = node.advertise<std_msgs::Empty>("targetReached", 10);
@@ -25,10 +25,9 @@ Mover::Mover()
     //Subscribers
     laserSub = node.subscribe("/scan", 1, &Mover::scanCallback, this);
     bumperSub = node.subscribe("mobile_base/events/bumper", 20, &Mover::bumperSubCallback, this);
-    //  imageSub = node.subscribe("/camera/rgb/image_rect_color", 10, &Mover::rgbCallback, this);
     getLocationSub = node.subscribe("/markerinfo", 10, &Mover::getLocationCallback, this);
     targetFinishedSub = node.subscribe("targetFinishedTopic", 10, &Mover::targetFinishedCallback, this);
-	  powerUpSub = node.subscribe("/gotStar", 10, &Mover::havePowerUp, this);
+    powerUpSub = node.subscribe("/gotStar", 10, &Mover::gotPowerUp, this);
 }
 
 
@@ -76,12 +75,12 @@ void Mover::rotateOdom(double angle)
     if(angle<0)
     {
         base_cmd.linear.y = base_cmd.linear.x = 0;
-        base_cmd.angular.z = 0.25;
+        base_cmd.angular.z = 0.5;
     }
     else
     {
         base_cmd.linear.y = base_cmd.linear.x = 0;
-        base_cmd.angular.z = -0.25;
+        base_cmd.angular.z = -0.5;
     }
 
     bool done = false;
@@ -160,16 +159,17 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
     ROS_INFO("Distance to marker %f !", m_distanceToMarker);
     for(int currIndex = minIndex+1; currIndex<=maxIndex; currIndex++)
     {
-        if(scan->ranges[currIndex] < closestRange)
+        std::cout<<scan->ranges[currIndex]<<endl;
+         if(scan->ranges[currIndex] < closestRange)
         {
             closestRange =	scan->ranges[currIndex];
         }
     }
     //ROS_INFO("closest range = %f", closestRange);
-    if(closestRange < MIN_PROXIMITY_RANGE_M)
+    if(m_distanceToMarker < MIN_PROXIMITY_RANGE_M)
     {
         m_keepMoving=false;
-        //rotate only if not approaching target
+        m_gotTarget=false;
         ROS_INFO("Obstacle in %f Turn 25 degrees!", closestRange);
         rotateOdom(25.0);
     }
@@ -217,27 +217,25 @@ void Mover::approachMarker(int param_marker_id)
     bool b_invalid_object = false;
 
     vel_msg.angular.z = m_angularVelocity;
-    if (m_distanceToMarker > 1.5)
-        vel_msg.linear.x = 0.5;
-    else
-        vel_msg.linear.x = 0.3* m_distanceToMarker;
+    if (m_distanceToMarker > 1.5) {vel_msg.linear.x = 0.5;}
+    else                          {vel_msg.linear.x = 0.3* m_distanceToMarker;}
+
+
     //decrease velocity as bot gets closer to target
     commandPub.publish(vel_msg);
     if (f_distance_old != m_distanceToMarker)
     {
-        if ((m_distanceToMarker - f_distance_old) > 0.1)
+        if ((fabs(m_distanceToMarker - f_distance_old)) > 0.1)
         {
-            //this is an invalid object!!!
             b_invalid_object = true;
-            //rotate the robot to the other direction to correct the mistake
-            m_angularVelocity = (-1)*m_angularVelocity;
+            m_angularVelocity = (-1)*m_angularVelocity; //rotate the robot to the other direction to correct the mistake
         }
         else
-            b_invalid_object = false;
+        b_invalid_object = false;
         f_distance_old = m_distanceToMarker;
     }
-    //return the robot to its correct course
-    commandPub.publish(vel_msg);
+
+
     if ((m_distanceToMarker<=0.7) && m_gotTarget && (param_marker_id == m_searchMarker) && !b_invalid_object)
     {
         if (m_searchMarker == 7)
@@ -251,10 +249,13 @@ void Mover::approachMarker(int param_marker_id)
             driveForwardOdom(0.75);
 
         }
-        ROS_INFO("Target Reached!!! The Marker is %d", m_searchMarker++);
+        m_searchMarker ++;
+        ROS_INFO("Target Reached!!! The Marker is %d", m_searchMarker);
         ROS_INFO("Searching next target: %d , distance is %f", m_searchMarker, m_distanceToMarker);
         m_gotTarget = false;
-        m_reachedTarget = true;
+        //m_reachedTarget = true;
+
+
         rotateOdom(180);
         ROS_INFO("Turned 180 degrees");
     }
@@ -267,13 +268,11 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
 {
     if (marker_msg->infos.size())
     {
-        //ROS_INFO("location callback!");
-        //map the coordiante to the center
         int i_array_length = marker_msg->infos.size();
         float f_Xm = 0.0;
-        //float f_Ym = marker_msg->infos[i].y;
+
         int i_marker_id = 0;
-        m_outOfSight = false;
+        m_outOfSight = true;
         for (int i=0; i<i_array_length; i++)
         {
             //check if marker id is equal to the next id that the bot is searching
@@ -283,13 +282,11 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
                 //got a new target!
                 i_marker_id = marker_msg->infos[i].id;
                 m_gotTarget = true;
-                m_reachedTarget = false;
-                m_outOfSight = true;
+               // m_reachedTarget = false;
+                m_outOfSight = false;
             }
         }
 
-        //ROS_INFO("Location of marker: %f", f_Xm);
-        //was if (!m_reachedTarget && f_Xm!=0.0 && m_gotTarget)
         while (m_gotTarget && m_outOfSight)
         {
             ROS_INFO("TF: SWITCHING TO TF");
@@ -312,13 +309,12 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
             }
             geometry_msgs::Twist vel_msg;
             // decrease distance between robot and marker, while avoiding obstacles;
-            if (m_distanceToMarker <= 1.0)
+            if (m_distanceToMarker <= 0.7)
             {
 
                 m_gotTarget = false;
                 vel_msg.angular.z = 0;
                 vel_msg.linear.x = 0;
-                //search for next marker
                 m_searchMarker++;
                 ROS_INFO("I'm too close to the marker, search next: %d", m_searchMarker);
             }
@@ -370,8 +366,8 @@ void Mover::startMoving()
     {
         if(m_gotTarget==false)
         {
-            m_reachedTarget = false;
-            moveRandomly();
+           // m_reachedTarget = false;
+           // moveRandomly();
         }
         else
         {
