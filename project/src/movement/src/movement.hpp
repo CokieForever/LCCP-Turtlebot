@@ -4,17 +4,15 @@
 #include "kobuki_msgs/BumperEvent.h"
 #include "tf/transform_listener.h"
 #include "sensor_msgs/Image.h"
+#include "std_msgs/Bool.h"
 class Mover
 {
 public://Tunable parameters
 
   const static double FORWARD_SPEED_MPS = 0.2;
-  const static double MIN_SCAN_ANGLE_RAD = -0.37 ; //+ M_PI remove mpi for gazebo
-  const static double MAX_SCAN_ANGLE_RAD = 0.37; //+ M_PI
-  const static float  MIN_PROXIMITY_RANGE_M = 0.65;	//Should be smaller than sensor_msgs::LaserScan::range_max
-
-  const static float TURTLE_ANGULAR_VELOCITY = 0.2;
-  const static float TURTLE_LINEAR_VELOCITY = 0.3;
+  const static double MIN_SCAN_ANGLE_RAD = -0.57 + M_PI; //+ M_PI; remove mpi for gazebo
+  const static double MAX_SCAN_ANGLE_RAD = 0.57 + M_PI; //+ M_PI;
+  const static float  MIN_PROXIMITY_RANGE_M = 0.7;	//Should be smaller than sensor_msgs::LaserScan::range_max
 
   Mover();
   void startMoving();
@@ -40,6 +38,7 @@ private:
      * getLocationSub
      * targetFinished
      * */
+    ros::Subscriber turtleStar;
     ros::Subscriber	laserSub;	// Subscriber to the robot's laser scan topic
     //ros::Subscriber markerId;   // Subscriber to the detect_markers topic including the founded aruco-markers
     ros::Subscriber bumperSub;     // Subscriber to the robot's bumber event topic
@@ -48,6 +47,7 @@ private:
     ros::Subscriber targetFinishedSub;
 
     tf::TransformListener m_coordinateListener;
+    double m_turtleSpeed;
     bool m_outOfSight; //set this attribute if turtlebot got target, but it went out of sight
     bool m_finishedMarkerSearch;
     int m_searchMarker;
@@ -56,10 +56,12 @@ private:
     bool m_keepMoving; //Indicates wether the robot should continue moving
     bool m_reachedTarget;
     bool m_gotTarget;
+    bool m_driveNow;
     geometry_msgs::Vector3Stamped m_target;
     int  m_nextId;
     void moveRandomly();
 
+    void starCallBack(const std_msgs::Bool::ConstPtr &star);
     void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan);
     void bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumper_msg);
     //void rgbCallback(const sensor_msgs::ImageConstPtr &msg);

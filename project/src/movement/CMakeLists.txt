@@ -5,7 +5,6 @@ project(movement)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED roscpp tf
-  detect_marker
   std_msgs
   cv_bridge
   sensor_msgs
