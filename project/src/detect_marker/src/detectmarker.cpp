@@ -29,7 +29,7 @@ DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
 
 void DetectMarker::IMUCallback(const sensor_msgs::Imu::ConstPtr& imu)
 {
-	m_isRotating = fabs(imu->angular_velocity.z) > 0.25;
+    m_isRotating = fabs(imu->angular_velocity.z) > 0.4;
 }
 
 std::vector<cv::Mat> DetectMarker::splitImageAndZoom(cv::Mat& img, int nbBlocks, std::vector<int>& vecX, std::vector<int>& vecY)
