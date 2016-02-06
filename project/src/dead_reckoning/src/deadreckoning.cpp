@@ -999,7 +999,6 @@ DeadReckoning::DeadReckoning(ros::NodeHandle& node, bool simulation, double minX
     m_scanGridPub = m_node.advertise<dead_reckoning::Grid>("/dead_reckoning/scan_grid", 10);
     m_depthGridPub = m_node.advertise<dead_reckoning::Grid>("/dead_reckoning/depth_grid", 10);
     
-    m_time = ros::Time::now();
     ROS_INFO("Ok, let's go.");
 }
 
