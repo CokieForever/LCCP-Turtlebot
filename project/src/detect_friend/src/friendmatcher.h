@@ -39,10 +39,10 @@ class FriendMatcher
         static cv::Mat binarizeImageKMeans(const cv::Mat& img);
         static cv::Mat removeIsolatedPixels(const cv::Mat& binImg, int nbMinNeighbours);
         static MatchResult compareBinaryImages(const cv::Mat& binImg1, const cv::Mat& binImg2);
+        static std::vector<cv::Rect> getImageRects(const cv::Mat& img, cv::Scalar scalarcolor);
         
         std::vector<TemplateInfo> m_templates;
         
-        std::vector<cv::Rect> getImageRects(const cv::Mat& img, cv::Scalar scalarcolor) const;
         MatchResult matchPerspective(const cv::Mat& aFullImg, const std::vector<cv::Rect>& rects, const TemplateInfo& templ) const;
 };
       
