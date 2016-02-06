@@ -163,99 +163,96 @@ cv::Mat FriendMatcher::removeIsolatedPixels(const cv::Mat& binImg, int nbMinNeig
     return output;
 }
 
-
-std::vector<cv::Rect> FriendMatcher::getImageRects(const cv::Mat& img, cv::Scalar scalarcolor) const
+std::vector<cv::Rect> FriendMatcher::getImageRects(const cv::Mat& img, cv::Scalar scalarcolor)
 {
-  cv::Scalar scalarcolor2 = convertToLabSpace(scalarcolor);
-  std::vector<std::vector<cv::Point> > contours;
-  std::vector<cv::Vec4i> hierarchy;
-  double area;
-  cv::Mat image_object, image_object2;
-  cv::Mat image_scene;
-  cv::Mat image_scene2;
-  std::vector<cv::Mat> rgb1;
-  cv::Mat add_res, add_res2, euclidean1, euclidean2;
-  cv::Mat imgCopysc=img.clone();
-  imgCopysc.convertTo(imgCopysc, CV_32FC3, 1/255.0);
-  cv::cvtColor(imgCopysc, imgCopysc, CV_BGR2Lab);
+    cv::Scalar scalarcolor2 = convertToLabSpace(scalarcolor);
+    std::vector<std::vector<cv::Point> > contours;
+    std::vector<cv::Vec4i> hierarchy;
+    double area;
+    cv::Mat image_object, image_object2;
+    cv::Mat image_scene;
+    cv::Mat image_scene2;
+    std::vector<cv::Mat> rgb1;
+    cv::Mat add_res, add_res2, euclidean1, euclidean2;
+    cv::Mat imgCopysc=img.clone();
+    imgCopysc.convertTo(imgCopysc, CV_32FC3, 1/255.0);
+    cv::cvtColor(imgCopysc, imgCopysc, CV_BGR2Lab);
 
-  //Calculate the absolute difference between the scalar and the image
-  cv::absdiff(imgCopysc, scalarcolor2, image_scene);
+    //Calculate the absolute difference between the scalar and the image
+    cv::absdiff(imgCopysc, scalarcolor2, image_scene);
 
- //Calculate the pow
-   cv::pow(image_scene, 2, image_scene2);
+    //Calculate the pow
+    cv::pow(image_scene, 2, image_scene2);
 
- //Split the channels in order to calculate the sum
-   cv::split(image_scene2, rgb1);
-   add_res=rgb1[0]+rgb1[1]+rgb1[2];
- //sgrt of the sum. Final DIstance
-   cv::sqrt(add_res, euclidean1);
- //normalization accordint to maximum distance
-   euclidean1=(euclidean1/372.87);
+    //Split the channels in order to calculate the sum
+    cv::split(image_scene2, rgb1);
+    add_res=rgb1[0]+rgb1[1]+rgb1[2];
+    //sgrt of the sum. Final DIstance
+    cv::sqrt(add_res, euclidean1);
+    //normalization according to maximum distance
+    euclidean1=(euclidean1/372.87);
 
-   cv::Mat scene, obj;
+    cv::Mat scene, obj;
 
-   //Set the pixels with euclidean distance from the scalar <0.15
+    //Set the pixels with euclidean distance from the scalar <0.15
 
-   cv::threshold(euclidean1, scene, 0.20, 1, cv::THRESH_BINARY_INV);
-   /*cv::imshow("Scene", scene);
-   cv::waitKey(1);*/
+    cv::threshold(euclidean1, scene, 0.20, 1, cv::THRESH_BINARY_INV);
+    /*cv::imshow("Scene", scene);
+    cv::waitKey(1);*/
 
-  //find contours in the image.
-  cv::Mat euclideanCopy2=scene.clone();
-  euclideanCopy2.convertTo(euclideanCopy2, CV_8U, 255);
-  cv::Mat aFullImgCopy = euclideanCopy2.clone();
+    //find contours in the image.
+    cv::Mat euclideanCopy2=scene.clone();
+    euclideanCopy2.convertTo(euclideanCopy2, CV_8U, 255);
+    cv::Mat aFullImgCopy = euclideanCopy2.clone();
 
-  cv::findContours( euclideanCopy2, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cv::Point(0, 0) );
+    cv::findContours( euclideanCopy2, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cv::Point(0, 0) );
 
-  //ignore the black contours
-  for(int i=0; i<contours.size(); i++)
-   {
-    if (cv::contourArea(contours[i],true) > 0)
-      {
-       //ROS_INFO("black");
-       contours.erase(contours.begin() + i);
-       hierarchy.erase(hierarchy.begin()+i);
-       i--;
-      }
-    else
-      {
-        //ROS_INFO("white");
-      }
-  }
-
-  //ROS_INFO("contour size %lu", contours.size() );
-  std::vector<std::vector<cv::Point> > contours_poly( contours.size() );
-  std::vector<cv::Rect> boundRect;
-
-  //create rectangles around contours of interest and draw
-  for( int i = 0; i < contours.size(); i++ )
+    //ignore the black contours
+    for(int i=0; i<contours.size(); i++)
     {
-      cv::approxPolyDP( cv::Mat(contours[i]), contours_poly[i], 3, true );
-      area=cv::contourArea(contours_poly[i]);
-      //ROS_INFO("area %.3f", area );
-      //ignore the contours that have area less than 10*10
-      if (area<100)
+        if (cv::contourArea(contours[i],true) > 0)
         {
-         contours.erase(contours.begin() + i);
-         hierarchy.erase(hierarchy.begin()+i);
-         i--;
+            //ROS_INFO("black");
+            contours.erase(contours.begin() + i);
+            hierarchy.erase(hierarchy.begin()+i);
+            i--;
         }
-      else
+        else
         {
-          cv::Rect rect = cv::boundingRect( cv::Mat(contours_poly[i]) );
-         boundRect.push_back(rect);
-        
-        cv::rectangle(aFullImgCopy, rect.tl(), rect.br(), cv::Scalar(255,255,255), 2);
+            //ROS_INFO("white");
+        }
+    }
+
+    //ROS_INFO("contour size %lu", contours.size() );
+    std::vector<std::vector<cv::Point> > contours_poly( contours.size() );
+    std::vector<cv::Rect> boundRect;
+
+    //create rectangles around contours of interest and draw
+    for( int i = 0; i < contours.size(); i++ )
+    {
+        cv::approxPolyDP( cv::Mat(contours[i]), contours_poly[i], 3, true );
+        area=cv::contourArea(contours_poly[i]);
+        //ROS_INFO("area %.3f", area );
+        //ignore the contours that have area less than 10*10
+        if (area<100)
+        {
+            contours.erase(contours.begin() + i);
+            hierarchy.erase(hierarchy.begin()+i);
+            i--;
+        }
+        else
+        {
+            cv::Rect rect = cv::boundingRect( cv::Mat(contours_poly[i]) );
+            boundRect.push_back(rect);
+
+            cv::rectangle(aFullImgCopy, rect.tl(), rect.br(), cv::Scalar(255,255,255), 2);
         }
     }
 
     /*cv::imshow("Rects", aFullImgCopy);
     cv::waitKey(1);*/
 
- return boundRect;
-
-
+    return boundRect;
 }
 
 FriendMatcher::MatchResult FriendMatcher::compareBinaryImages(const cv::Mat& binImg1, const cv::Mat& binImg2)
@@ -284,10 +281,6 @@ FriendMatcher::MatchResult FriendMatcher::compareBinaryImages(const cv::Mat& bin
     
     return result;
 }
-
-
-
-
 
 FriendMatcher::MatchResult FriendMatcher::matchPerspective(const cv::Mat& aFullImg, const std::vector<cv::Rect>& rects, const FriendMatcher::TemplateInfo& templ) const
 {
