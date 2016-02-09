@@ -2,13 +2,33 @@
 #include "../../utilities.h"
 
 
+/**
+ * @brief Wrapper to create an SDL_Color structure from RGB components.
+ *
+ * @param r The Red component (between 0 and 255).
+ * @param g The Green component (between 0 and 255).
+ * @param b The Blue component (between 0 and 255).
+ * @return The new SDL_Color structure.
+ */
 static SDL_Color createColor(int r, int g, int b)
 {
     SDL_Color color = {r, g, b};
     return color;
 }
 
-//From SDL documentation
+/**
+ * @brief Sets a pixel of an SDL Surface to a specific color.
+ *
+ * The surface should be locked (see SDL_LockSurface()) before calling this function.
+ * This function comes from the SDL documentation.
+ *
+ * @param surface The SDL Surface.
+ * @param x The x-coordinate of the pixel to set.
+ * @param y The y-coordinate of the pixel to set.
+ * @param pixel The color to set to the pixel, as a 32-bits unsigned integer (use SDL_MapRGB() / SDL_MapRGBA() to create it).
+ * @param check True if the provided coordinates must be checked before setting the pixel. If check is False and invalid coordinates are set, this might cause a segfault.
+ * @return True if the pixel was successfully set.
+ */
 static bool putPixel(SDL_Surface *surface, int x, int y, Uint32 pixel, bool check=true)
 {
     if (check)
@@ -54,7 +74,21 @@ static bool putPixel(SDL_Surface *surface, int x, int y, Uint32 pixel, bool chec
     return true;
 }
 
-//From here: http://stackoverflow.com/questions/11737988/how-to-draw-a-line-using-sdl-without-using-external-libraries
+/**
+ * @brief Draw a line segment on a SDL Surface.
+ *
+ * The surface should be locked (see SDL_LockSurface()) before calling this function.
+ * The line has a thickness of one pixel.
+ * Provided coordinates can be outside the surface area.
+ * The function comes from here: http://stackoverflow.com/questions/11737988/how-to-draw-a-line-using-sdl-without-using-external-libraries
+ *
+ * @param surf The SDL Surface to draw on.
+ * @param x1 The x-coordinate of the first pixel of the line segment.
+ * @param y1 The y-coordinate of the first pixel of the line segment.
+ * @param x2 The x-coordinate of the last pixel of the line segment.
+ * @param y2 The y-coordinate of the last pixel of the line segment.
+ * @param color The color to use to draw the line.
+ */
 static void drawLine(SDL_Surface *surf, float x1, float y1, float x2, float y2, SDL_Color color)
 {
     Uint32 pixel = SDL_MapRGB(surf->format, color.r, color.g, color.b);
@@ -102,6 +136,9 @@ static void drawLine(SDL_Surface *surf, float x1, float y1, float x2, float y2, 
     SDL_UnlockSurface(surf);
 }
 
+/**
+ * @brief Creates internal storage and cleans it.
+ */
 void Grid::init()
 {
     updateSize();
@@ -112,6 +149,9 @@ void Grid::init()
     //ROS_INFO("(%d x %d) = %d", m_width, m_height, m_height*m_width);
 }
 
+/**
+ * @brief Frees internal storage.
+ */
 void Grid::empty()
 {
     if (m_data != NULL)
@@ -127,6 +167,9 @@ void Grid::empty()
     }
 }
 
+/**
+ * @brief Rounds the coordinates of the upper-left and lower-right corners and updates the height and width.
+ */
 void Grid::updateSize()
 {
     m_minX = m_precision * round(m_minX / m_precision);
@@ -137,6 +180,13 @@ void Grid::updateSize()
     m_width = round((m_maxX - m_minX) / m_precision)+1;
 }
 
+/**
+ * @brief Accesses the probability of a point at given grid coordinates.
+ *
+ * @param ix The x-coordinate of the point to access.
+ * @param iy The y-coordinate of the point to access.
+ * @return The obstacle probability  at this point, between 0 and 1, negative means unknown.
+ */
 double Grid::_get(int ix, int iy)
 {
     if (ix < 0 || iy < 0 || ix >= m_width || iy >= m_height)
@@ -150,18 +200,46 @@ double Grid::_get(int ix, int iy)
     return m_data[k]->p;
 }
 
+/**
+ * @brief Standard constructor.
+ *
+ * Creates an empty Grid mapped at specified coordinates in the real world.
+ *
+ * @param precision The precision of the discretization, in m / unit.
+ * @param ttl The Time To Live of a point in the Grid.
+ * @param minX The x-coordinate of the upper-left corner of the Grid in the real world.
+ * @param maxX The x-coordinate of the lower-right corner of the Grid in the real world.
+ * @param minY The y-coordinate of the upper-left corner of the Grid in the real world.
+ * @param maxY The y-coordinate of the lower-right corner of the Grid in the real world.
+ * @param resizeable True if the grid can be automatically resized to integrate new points. !WARNING! This is an untested feature.
+ */
 Grid::Grid(double precision, ros::Duration ttl, double minX, double maxX, double minY, double maxY, bool resizeable):
     m_precision(precision), m_ttl(ttl), m_minX(minX), m_maxX(maxX), m_minY(minY), m_maxY(maxY), m_resizeable(resizeable)
 {
     init();
 }
 
+/**
+ * @brief Copy constructor.
+ *
+ * Creates an EMPTY Grid with the same settings as the one provided.
+ *
+ * @param grid The Grid to copy.
+ */
 Grid::Grid(const Grid& grid):
     m_precision(grid.m_precision), m_ttl(grid.m_ttl), m_minX(grid.m_minX), m_maxX(grid.m_maxX), m_minY(grid.m_minY), m_maxY(grid.m_maxY), m_resizeable(grid.m_resizeable)
 {
     init();            
 }
 
+/**
+ * @brief Assignment operator.
+ *
+ * Empties the Grid and assigns the same settings as the one provided. The Grid is EMPTY after the operation and needs to be filled again.
+ *
+ * @param grid The Grid to copy.
+ * @return This Grid.
+ */
 Grid& Grid::operator=(const Grid& grid)
 {
     empty();
@@ -176,32 +254,61 @@ Grid& Grid::operator=(const Grid& grid)
     return *this;
 }
 
+/**
+ * @brief Destructor.
+ *
+ * Frees internal storage.
+ */
 Grid::~Grid()
 {
     empty();
 }
 
+/**
+ * @brief Gets the Grid precision, in m / unit.
+ */
 double Grid::precision() const
 {
     return m_precision;
 }
 
+/**
+ * @brief Gets x-coordinate of the upper-left corner of the Grid in the real world.
+ */
 double Grid::minX() const
 {
     return m_minX;
 }
 
+/**
+ * @brief Gets y-coordinate of the upper-left corner of the Grid in the real world.
+ */
 double Grid::minY() const
 {
     return m_minY;
 }
 
+/**
+ * @brief Adds a new point in the Grid.
+ *
+ * @param x The x-coordinate of the point in the real world.
+ * @param y The y-coordinate of the point in the real world.
+ * @param t The time stamp of the point.
+ * @param p The obstacle probability  at this point.
+ * @return True if the point was successfully added.
+ */
 bool Grid::addPoint(double x, double y, ros::Time t, double p)
 {
     ProbabilisticPoint point = {x, y, t, p};
     return addPoint(point);
 }
 
+/**
+ * @brief Adds a new point in the Grid.
+ *
+ * @param point The point to add, with coordinates expressed in the real world.
+ * @return True if the point was successfully added.
+ */
 bool Grid::addPoint(ProbabilisticPoint point)
 {
     double x = m_precision * round(point.x / m_precision);
@@ -267,6 +374,13 @@ bool Grid::addPoint(ProbabilisticPoint point)
     return true;
 }
 
+/**
+ * @brief Gets the obstacle probability at a given point.
+ *
+ * @param x The x-coordinate of the point in the real world.
+ * @param y The y-coordinate of the point in the real world.
+ * @return The obstacle probability  at this point, between 0 and 1, negative means unknown.
+ */
 double Grid::get(double x, double y)
 {
     int ix = round((x-m_minX) / m_precision);
@@ -274,6 +388,15 @@ double Grid::get(double x, double y)
     return _get(ix, iy);
 }
 
+/**
+ * @brief Gets obstacle probabilities for all points in the Grid.
+ *
+ * @param width Pointer to a variable which will receive the width of the Grid in Grid units, can be NULL.
+ * @param height Pointer to a variable which will receive the height of the Grid in Grid units, can be NULL.
+ * @param scale Pointer to a variable which will receive the scale of the grid in m / unit, can be NULL.
+ * @return Pointer to newly allocated data (must be freed with delete when not needed anymore) containing the obstacles probabilities
+ * (between 0 and 1, negative means unknown) as a 1D array arranged in column-major order.
+ */
 double* Grid::getAll(int* width, int *height, double *scale) const
 {
     double *data = new double[m_width*m_height];
@@ -301,6 +424,18 @@ double* Grid::getAll(int* width, int *height, double *scale) const
     return data;
 }
 
+/**
+ * @brief Draws the Grid on an SDL Surface.
+ *
+ * @param w The surface's width.
+ * @param h The surface's height.
+ * @param minX The real world x-coordinate of the point which should be mapped to the surface's upper-left pixel.
+ * @param maxX The real world x-coordinate of the point which should be mapped to the surface's lower-right pixel.
+ * @param minY The real world y-coordinate of the point which should be mapped to the surface's upper-left pixel.
+ * @param maxY The real world y-coordinate of the point which should be mapped to the surface's lower-right pixel.
+ * @param surf The surface to draw on, can be NULL, in this case it will be created (deletion is caller's job - see SDL_FreeSurface()).
+ * @return The surface with the Grid drawn on it.
+ */
 SDL_Surface* Grid::draw(int w, int h, double minX, double maxX, double minY, double maxY, SDL_Surface *surf)
 {
     //ROS_INFO("Drawing grid");
@@ -331,12 +466,22 @@ SDL_Surface* Grid::draw(int w, int h, double minX, double maxX, double minY, dou
     return surf;
 }
 
+/**
+ * @brief Maps an angle to fit in the range [0 ; 2*M_PI].
+ */
 double DeadReckoning::modAngle(double rad)
 {
     return fmod(fmod(rad, 2*M_PI) + 2*M_PI, 2*M_PI);
 }
 
-//From https://github.com/ros-perception/pointcloud_to_laserscan/blob/indigo-devel/src/pointcloud_to_laserscan_nodelet.cpp
+/**
+ * @brief Converts a points cloud message into a laser scan message, possibly loosing information.
+ *
+ * This function was adapted from https://github.com/ros-perception/pointcloud_to_laserscan/blob/indigo-devel/src/pointcloud_to_laserscan_nodelet.cpp
+ *
+ * @param cloud_msg The points cloud message to convert.
+ * @param output A reference to the laser scan message to fill.
+ */
 void DeadReckoning::pointCloudToLaserScan(const sensor_msgs::PointCloud2ConstPtr &cloud_msg, sensor_msgs::LaserScan& output)
 {
     output.angle_min = -30.0 * M_PI/180;
@@ -385,6 +530,12 @@ void DeadReckoning::pointCloudToLaserScan(const sensor_msgs::PointCloud2ConstPtr
     }
 }
 
+/**
+ * @brief Wrapper to load an image into a SDL Surface.
+ *
+ * @param path The path to the image to load.
+ * @return The newly allocated surface containing the image (deletion is caller's job - see SDL_FreeSurface()).
+ */
 SDL_Surface* DeadReckoning::loadImg(std::string path)
 {
     SDL_Surface *surf = IMG_Load(path.c_str());
@@ -393,6 +544,12 @@ SDL_Surface* DeadReckoning::loadImg(std::string path)
     return surf;
 }
 
+/**
+ * @brief Gets the estimated position of the robot at a given time, according to history records.
+ *
+ * @param time The time at which the robot position is to be estimated.
+ * @return The estimated position, with a time stamp.
+ */
 DeadReckoning::StampedPos DeadReckoning::getPosForTime(const ros::Time& time)
 {
     if (m_simulation)
@@ -413,6 +570,13 @@ DeadReckoning::StampedPos DeadReckoning::getPosForTime(const ros::Time& time)
     return prevPos;
 }
 
+/**
+ * @brief Callback of the friends detection topic.
+ *
+ * Converts the information received about the friends in real world positions and stores them internally.
+ *
+ * @param friendsInfos The received FriendsInfos message.
+ */
 void DeadReckoning::friendsCallback(const detect_friend::FriendsInfos::ConstPtr& friendsInfos)
 {
     for (int i=0 ; i < NB_FRIENDS ; i++)
@@ -433,6 +597,13 @@ void DeadReckoning::friendsCallback(const detect_friend::FriendsInfos::ConstPtr&
     }
 }
 
+/**
+ * @brief Callback of the markers detection topic.
+ *
+ * Converts the information received about the markers in real world positions and stores them internally.
+ *
+ * @param markersInfos The received MarkersInfos message.
+ */
 void DeadReckoning::markersCallback(const detect_marker::MarkersInfos::ConstPtr& markersInfos)
 {
     for (int i=0 ; i < 256 ; i++)
@@ -453,6 +624,13 @@ void DeadReckoning::markersCallback(const detect_marker::MarkersInfos::ConstPtr&
     }
 }
 
+/**
+ * @brief Callback of the inertial sensors topic.
+ *
+ * In real life, stores the estimated orientation of the robot to compute the estimated position later (when receiving an Odometry message).
+ *
+ * @param imu The received Imu message.
+ */
 void DeadReckoning::IMUCallback(const sensor_msgs::Imu::ConstPtr& imu)
 {
     if (!m_simulation)
@@ -464,6 +642,13 @@ void DeadReckoning::IMUCallback(const sensor_msgs::Imu::ConstPtr& imu)
     }
 }
 
+/**
+ * @brief Callback of the odometry topic.
+ *
+ * In real life, computes the new estimated robot position according to the odometry information received (wheel sensors) and current orientation (received through IMU sensors).
+ *
+ * @param odom The received Odometry message.
+ */
 void DeadReckoning::odomCallback(const nav_msgs::Odometry::ConstPtr& odom)
 {
     if (!m_simulation)
@@ -484,6 +669,13 @@ void DeadReckoning::odomCallback(const nav_msgs::Odometry::ConstPtr& odom)
     }
 }
 
+/**
+ * @brief Callback of the velocity orders topic.
+ *
+ * In simulation, computes the new estimated robot position according to the orders sent to it.
+ *
+ * @param order The received Twist message.
+ */
 void DeadReckoning::moveOrderCallback(const geometry_msgs::Twist::ConstPtr& order)
 {
     //ROS_INFO("Received order: v=%.3f, r=%.3f", order->linear.x, order->angular.z);
@@ -512,6 +704,13 @@ void DeadReckoning::moveOrderCallback(const geometry_msgs::Twist::ConstPtr& orde
     m_angularSpeed = order->angular.z;
 }
 
+/**
+ * @brief Callback of the topic of the local map node associated to the laser scan.
+ *
+ * Updates the internal Grid with the data of the new occupancy grid and publishes the result under the name "dead_reckoning/scan_grid" (see DeadReckoning::publishGrid()).
+ *
+ * @param occ The received OccupancyGrid message.
+ */
 void DeadReckoning::localMapScanCallback(const nav_msgs::OccupancyGrid::ConstPtr& occ)
 {
     //ROS_INFO("Received local map");
@@ -519,6 +718,13 @@ void DeadReckoning::localMapScanCallback(const nav_msgs::OccupancyGrid::ConstPtr
     publishGrid(m_scanGrid, m_scanGridPub);
 }
 
+/**
+ * @brief Callback of the topic of the local map node associated to the depth image.
+ *
+ * Updates the internal Grid with the data of the new occupancy grid and publishes the result under the name "dead_reckoning/depth_grid" (see DeadReckoning::publishGrid()).
+ *
+ * @param occ The received OccupancyGrid message.
+ */
 void DeadReckoning::localMapDepthCallback(const nav_msgs::OccupancyGrid::ConstPtr& occ)
 {
     //ROS_INFO("Received local map");
@@ -526,6 +732,12 @@ void DeadReckoning::localMapDepthCallback(const nav_msgs::OccupancyGrid::ConstPt
     publishGrid(m_depthGrid, m_depthGridPub);
 }
 
+/**
+ * @brief Updates the Grid according to the content of an OccupancyGrid message (received from local map nodes).
+ *
+ * @param occ The received OccupancyGrid message.
+ * @param grid A reference to the grid to update.
+ */
 void DeadReckoning::updateGridFromOccupancy(const nav_msgs::OccupancyGrid::ConstPtr& occ, Grid& grid)
 {
     ros::Time t = ros::Time::now();
@@ -546,6 +758,15 @@ void DeadReckoning::updateGridFromOccupancy(const nav_msgs::OccupancyGrid::Const
     }
 }
 
+/**
+ * @brief Updates the points cloud and other data according to the content of an LaserScan message (received from laser scan nodes or converted from depth images nodes).
+ *
+ * @param scan The received LaserScan message.
+ * @param invert True if the laser scan should be inverted (180° rotation) before processing, the original message is left untouched in any case.
+ * @param ranges An array to store the 360° ranges extracted from laser scan data, should be wide enough (use m_scanRanges or m_depthRanges).
+ * @param cloudPoints An array to store the points cloud extracted from laser scan data, should contains NB_CLOUDPOINTS points (use m_scanCloudPoints or m_depthCloudPoints).
+ * @param startIdx The index of the oldest point in the cloudPoints array (will be the first to be removed, then points are replaced in increasing index order, modulo the size of the array).
+ */
 void DeadReckoning::processLaserScan(sensor_msgs::LaserScan& scan, bool invert, double *ranges, Vector *cloudPoints, int& startIdx)
 {
     int maxIdx = ceil(360 / ANGLE_PRECISION);
@@ -587,7 +808,14 @@ void DeadReckoning::processLaserScan(sensor_msgs::LaserScan& scan, bool invert, 
     startIdx += nbRanges;
 }
 
-// Process the incoming laser scan message
+/**
+ * @brief Callback of the laser scan topic.
+ *
+ * Compute new cloud points and new proximity ranges from the laser scan, which are stored in this instance.
+ * Publishes the resulting laser scan under the name "/local_map_scan/scan" to be used by local map nodes.
+ *
+ * @param scan The received LaserScan message.
+ */
 void DeadReckoning::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
     sensor_msgs::LaserScan scanCopy = *scan;
@@ -597,6 +825,14 @@ void DeadReckoning::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
     m_laserScanPub.publish(scanCopy);
 }
 
+/**
+ * @brief Callback of the depth image topic.
+ *
+ * Converts the depth image into a laser scan and use it to compute new cloud points and new proximity ranges which are stored in this instance.
+ * Publishes the resulting laser scan under the name "/local_map_depth/scan" to be used by local map nodes.
+ *
+ * @param cloud The received PointCloud2 message.
+ */
 void DeadReckoning::depthCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
 {
     sensor_msgs::LaserScan scan;
@@ -607,6 +843,9 @@ void DeadReckoning::depthCallback(const sensor_msgs::PointCloud2::ConstPtr& clou
     m_laserDepthPub.publish(scan);
 }
 
+/**
+ * @brief Publishes all transforms related to the robot / Grid positions and orientations needed by other nodes (movement and local maps).
+ */
 void DeadReckoning::publishTransforms()
 {
     tf::Transform transform;
@@ -644,6 +883,9 @@ void DeadReckoning::publishTransforms()
     }
 }
 
+/**
+ * @brief Publishes all known positions of the markers via transforms.
+ */
 void DeadReckoning::publishMarkersTransforms()
 {
     tf::Transform transform;
@@ -663,6 +905,9 @@ void DeadReckoning::publishMarkersTransforms()
     }
 }
 
+/**
+ * @brief Publishes all known positions of the friends via transforms.
+ */
 void DeadReckoning::publishFriendsTransforms()
 {
     tf::Transform transform;
@@ -682,6 +927,15 @@ void DeadReckoning::publishFriendsTransforms()
     }
 }
 
+/**
+ * @brief Publishes a Grid through a given pusblisher.
+ *
+ * The grid is published under the form of a dead_reckoning::Grid message, basically a 1D array containing obstacle probabilities stored in column-major order.
+ * See Grid::getAll() for more information.
+ *
+ * @param grid The Grid to publish.
+ * @param pub The publisher to use to publish the Grid.
+ */
 void DeadReckoning::publishGrid(const Grid& grid, ros::Publisher& pub)
 {
     dead_reckoning::Grid gridMsg;
@@ -700,6 +954,11 @@ void DeadReckoning::publishGrid(const Grid& grid, ros::Publisher& pub)
     delete data;
 }
 
+/**
+ * @brief Initializes the SDL, creates the display and allocates needed surfaces.
+ *
+ * @return True on success.
+ */
 bool DeadReckoning::initSDL()
 {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
@@ -762,6 +1021,9 @@ bool DeadReckoning::initSDL()
     return true;
 }
 
+/**
+ * @brief Updates the display according to current internal data.
+ */
 void DeadReckoning::updateDisplay()
 {
     //ROS_INFO("Updating display");
@@ -835,6 +1097,14 @@ void DeadReckoning::updateDisplay()
     //ROS_INFO("Display updated.");
 }
 
+/**
+ * @brief Converts a real world position into display coordinates.
+ *
+ * @param fx The x-coordinate of the real world position.
+ * @param fy The y-coordinate of the real world position.
+ * @param x A reference to the variable in which the x display coordinate will be stored.
+ * @param y A reference to the variable in which the y display coordinate will be stored.
+ */
 void DeadReckoning::convertPosToDisplayCoord(double fx, double fy, int& x, int& y)
 {
     double kx = SCREEN_WIDTH / (m_maxX - m_minX);
@@ -843,13 +1113,26 @@ void DeadReckoning::convertPosToDisplayCoord(double fx, double fy, int& x, int& 
     y = SCREEN_HEIGHT - (fy-m_minY) * ky;
 }
 
+/**
+ * @brief Standard constructor.
+ *
+ * Creates and initializes a fresh empty instance of a Dead Reckoning monitor with specified settings.
+ *
+ * @param node The main node handle.
+ * @param simulation True to use simulation behavior (no odometry, no IMU, no depth image, ...).
+ * @param minX The x-coordinate of the point mapped to the upper-left corner of the display in the real world.
+ * @param maxX The x-coordinate of the point mapped to the lower-right corner of the display in the real world.
+ * @param minY The y-coordinate of the point mapped to the upper-left corner of the display in the real world.
+ * @param maxY The y-coordinate of the point mapped to the lower-right corner of the display in the real world.
+ */
 DeadReckoning::DeadReckoning(ros::NodeHandle& node, bool simulation, double minX, double maxX, double minY, double maxY):
-    m_node(node), m_simulation(simulation),
+    m_node(node), m_simulation(simulation), m_ok(false),
     m_scanCloudPointsStartIdx(0), m_depthCloudPointsStartIdx(0),
     m_angularSpeed(0), m_linearSpeed(0),
     m_minX(minX), m_maxX(maxX), m_minY(minY), m_maxY(maxY)
 {
-    initSDL();
+    if (!initSDL())
+        return;
     
     if (m_simulation)
     {
@@ -870,7 +1153,7 @@ DeadReckoning::DeadReckoning(ros::NodeHandle& node, bool simulation, double minX
     m_offsetZOdom = nan("");
     
     m_positionsHist = new StampedPos[SIZE_POSITIONS_HIST];
-    //TODO exception if m_positionsHist == NULL
+    checkPointerOk(m_positionsHist, "Unable to allocate positions buffer.");
     for (int i=0 ; i < SIZE_POSITIONS_HIST ; i++)
     {
         m_positionsHist[i].x = nan("");
@@ -887,8 +1170,9 @@ DeadReckoning::DeadReckoning(ros::NodeHandle& node, bool simulation, double minX
     }
     
     m_friendsPos = new StampedPos[NB_FRIENDS];
+    checkPointerOk(m_friendsPos, "Unable to allocate friends positions buffer.");
     m_friendInSight = new bool[NB_FRIENDS];
-    //TODO check if not NULL
+    checkPointerOk(m_friendInSight, "Unable to allocate friends status buffer.");
     for (int i=0 ; i < NB_FRIENDS ; i++)
     {
         m_friendsPos[i].x = nan("");
@@ -901,16 +1185,16 @@ DeadReckoning::DeadReckoning(ros::NodeHandle& node, bool simulation, double minX
     
     int nbRanges = ceil(360 / ANGLE_PRECISION);
     m_scanRanges = new double[nbRanges];
-    //TODO exception if m_scanRanges == NULL
+    checkPointerOk(m_scanRanges, "Unable to allocate scan ranges.");
     for (int i=0 ; i < nbRanges ; i++)
         m_scanRanges[i] = nan("");
     
     m_depthRanges = new double[nbRanges];
-    //TODO exception if m_depthRanges == NULL
+    checkPointerOk(m_depthRanges, "Unable to allocate depth ranges.");
     memcpy(m_depthRanges, m_scanRanges, sizeof(double)*nbRanges);
 
     m_scanCloudPoints = new Vector[NB_CLOUDPOINTS];
-    //TODO exception if m_scanCloudPoints == NULL
+    checkPointerOk(m_scanCloudPoints, "Unable to allocate scan cloud points.");
     for (int i=0 ; i < NB_CLOUDPOINTS ; i++)
     {
         m_scanCloudPoints[i].x = nan("");
@@ -918,7 +1202,7 @@ DeadReckoning::DeadReckoning(ros::NodeHandle& node, bool simulation, double minX
     }
     
     m_depthCloudPoints = new Vector[NB_CLOUDPOINTS];
-    //TODO exception if m_depthCloudPoints == NULL
+    checkPointerOk(m_depthCloudPoints, "Unable to allocate depth cloud points.");
     memcpy(m_depthCloudPoints, m_scanCloudPoints, sizeof(Vector)*NB_CLOUDPOINTS);
     
     // Subscribe to the robot's laser scan topic
@@ -999,9 +1283,15 @@ DeadReckoning::DeadReckoning(ros::NodeHandle& node, bool simulation, double minX
     m_scanGridPub = m_node.advertise<dead_reckoning::Grid>("/dead_reckoning/scan_grid", 10);
     m_depthGridPub = m_node.advertise<dead_reckoning::Grid>("/dead_reckoning/depth_grid", 10);
     
+    m_ok = true;
     ROS_INFO("Ok, let's go.");
 }
 
+/**
+ * @brief Destructor.
+ *
+ * Frees internal storage.
+ */
 DeadReckoning::~DeadReckoning()
 {
     if (m_positionsHist != NULL)
@@ -1046,6 +1336,11 @@ DeadReckoning::~DeadReckoning()
     SDL_Quit();
 }
 
+/**
+ * @brief Starts processing.
+ *
+ * This function does not return until a SIGTERM is received or ROS stops working.
+ */
 void DeadReckoning::reckon()
 {
     ROS_INFO("Starting reckoning.");
@@ -1061,17 +1356,27 @@ void DeadReckoning::reckon()
     }
 }
 
-const double DeadReckoning::ANGLE_PRECISION = 0.1; //deg
-const int DeadReckoning::NB_CLOUDPOINTS = 1000;
-const double DeadReckoning::MAX_RANGE = 15.0;
-const int DeadReckoning::SCREEN_HEIGHT = 600;
-const int DeadReckoning::SCREEN_WIDTH = 600;
-const std::string DeadReckoning::LOCALMAP_SCAN_TRANSFORM_NAME = "localmap_pos_scan";
-const std::string DeadReckoning::LOCALMAP_DEPTH_TRANSFORM_NAME = "localmap_pos_depth";
-const std::string DeadReckoning::ROBOTPOS_TRANSFORM_NAME = "deadreckoning_robotpos";
-const std::string DeadReckoning::SCANGRIDPOS_TRANSFORM_NAME = "deadreckoning_scangridpos";
-const std::string DeadReckoning::DEPTHGRIDPOS_TRANSFORM_NAME = "deadreckoning_depthgridpos";
-const std::string DeadReckoning::MARKERPOS_TRANSFORM_NAME = "deadreckoning_markerpos";
-const std::string DeadReckoning::FRIENDPOS_TRANSFORM_NAME = "deadreckoning_friendpos";
-const int DeadReckoning::SIZE_POSITIONS_HIST = 1000;
-const int DeadReckoning::NB_FRIENDS = 3;
+/**
+ * @brief Tells if the instance is ready to start.
+ *
+ * @return True if it ready.
+ */
+bool DeadReckoning::ready()
+{
+    return m_ok;
+}
+
+const double DeadReckoning::ANGLE_PRECISION = 0.1;                                              /*!< The angle delta between two consecutive proximity ranges, in degrees. */
+const int DeadReckoning::NB_CLOUDPOINTS = 1000;                                                 /*!< The size of the internal cloud points buffer. */
+const double DeadReckoning::MAX_RANGE = 15.0;                                                   /*!< The maximum range to keep for proximity ranges, greater ranges will be stored as infinity. */
+const int DeadReckoning::SCREEN_HEIGHT = 600;                                                   /*!< The height of the display in pixels. */
+const int DeadReckoning::SCREEN_WIDTH = 600;                                                    /*!< The width of the display in pixels. */
+const std::string DeadReckoning::LOCALMAP_SCAN_TRANSFORM_NAME = "localmap_pos_scan";            /*!< The name of the topic on which laser scans formatted for local map nodes are published. */
+const std::string DeadReckoning::LOCALMAP_DEPTH_TRANSFORM_NAME = "localmap_pos_depth";          /*!< The name of the topic on which depth images formatted for local map nodes are published. */
+const std::string DeadReckoning::ROBOTPOS_TRANSFORM_NAME = "deadreckoning_robotpos";            /*!< The name of the transformation through which the estimated robot position is published. */
+const std::string DeadReckoning::SCANGRIDPOS_TRANSFORM_NAME = "deadreckoning_scangridpos";      /*!< The name of the transformation through which the position (upper-left corner) of the Grid based on laser scan data is published. */
+const std::string DeadReckoning::DEPTHGRIDPOS_TRANSFORM_NAME = "deadreckoning_depthgridpos";    /*!< The name of the transformation through which the position (upper-left corner) of the Grid based on depth image data is published. */
+const std::string DeadReckoning::MARKERPOS_TRANSFORM_NAME = "deadreckoning_markerpos";          /*!< The name of the transformation through which the estimated markers positions are published. */
+const std::string DeadReckoning::FRIENDPOS_TRANSFORM_NAME = "deadreckoning_friendpos";          /*!< The name of the transformation through which the estimated friends positions are published. */
+const int DeadReckoning::SIZE_POSITIONS_HIST = 1000;                                            /*!< The size of the internal positions history. */
+const int DeadReckoning::NB_FRIENDS = 3;                                                        /*!< Number of friends currently registered. */

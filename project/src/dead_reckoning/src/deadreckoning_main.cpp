@@ -21,7 +21,8 @@ int main(int argc, char **argv)
         minY = 0; maxY = 10;
     }
     DeadReckoning dr(node, simulation, minX, maxX, minY, maxY);
-    dr.reckon();
+    if (dr.ready())
+        dr.reckon();
     
     ROS_INFO("Bye!");
     return 0;

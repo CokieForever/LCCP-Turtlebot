@@ -1,6 +1,7 @@
 var searchData=
 [
   ['readme',['readme',['../detect__friend__orb_8cpp.html#ad1da5b031c05c05e0c2c2f5a0c2e1c70',1,'detect_friend_orb.cpp']]],
+  ['ready',['ready',['../class_dead_reckoning.html#a56b397a8eec5046f737c60273828ca33',1,'DeadReckoning']]],
   ['reckon',['reckon',['../class_dead_reckoning.html#a1fa7dd22817ea9f70e1ddf9154aac341',1,'DeadReckoning']]],
   ['record',['record',['../class_my_little_cam_recorder.html#ad7a0142b4825aed81f15a39a1fb7a8aa',1,'MyLittleCamRecorder']]],
   ['ref',['ref',['../autocov_8m.html#a6752968761dc456fe241271e0b76440b',1,'autocov.m']]],
@@ -15,6 +16,6 @@ var searchData=
   ['rotation_5fangle',['ROTATION_ANGLE',['../classinitial__detection.html#a38cb2f64a8677f8b7d620f534a079c3b',1,'initial_detection']]],
   ['rotation_5fspeed',['ROTATION_SPEED',['../classinitial__detection.html#a1a00f53b17158f05b9bb5e7b0a2a6a89',1,'initial_detection']]],
   ['run_5finitial_5fdetection_2ecpp',['run_initial_detection.cpp',['../run__initial__detection_8cpp.html',1,'']]],
-  ['run_5fmover_2ecpp',['run_mover.cpp',['../movement_2src_2run__mover_8cpp.html',1,'']]],
-  ['run_5fmover_2ecpp',['run_mover.cpp',['../turtlebot__ui_2src_2movement_2run__mover_8cpp.html',1,'']]]
+  ['run_5fmover_2ecpp',['run_mover.cpp',['../turtlebot__ui_2src_2movement_2run__mover_8cpp.html',1,'']]],
+  ['run_5fmover_2ecpp',['run_mover.cpp',['../movement_2src_2run__mover_8cpp.html',1,'']]]
 ];
