@@ -96,13 +96,41 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:ab6b9fe00c7a393037a733ddf652fd482"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="utilities_8h.html#ab6b9fe00c7a393037a733ddf652fd482">checkRosOk_v</a>()&#160;&#160;&#160;if (!ros::ok()) {ROS_ERROR(&quot;ROS interrupted.&quot;); return;}</td></tr>
-<tr class="separator:ab6b9fe00c7a393037a733ddf652fd482"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa2000e3a201fa6a68f5211c9f1d5b73e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="utilities_8h.html#aa2000e3a201fa6a68f5211c9f1d5b73e">checkRosOk</a>(r)&#160;&#160;&#160;if (!ros::ok()) {ROS_ERROR(&quot;ROS interrupted.&quot;); return r;}</td></tr>
-<tr class="separator:aa2000e3a201fa6a68f5211c9f1d5b73e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac68a5ce7fa0f2b73db3c7b3eefba856c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="utilities_8h.html#ac68a5ce7fa0f2b73db3c7b3eefba856c">checkRosOk_v</a>()            &#160;&#160;&#160;if (!ros::ok()) {ROS_ERROR(&quot;ROS interrupted.&quot;); return;}</td></tr>
+<tr class="separator:ac68a5ce7fa0f2b73db3c7b3eefba856c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1cb851913aeb9fe8cc941e4b56bc5cbb"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="utilities_8h.html#a1cb851913aeb9fe8cc941e4b56bc5cbb">checkRosOk</a>(r)            &#160;&#160;&#160;if (!ros::ok()) {ROS_ERROR(&quot;ROS interrupted.&quot;); return r;}</td></tr>
+<tr class="separator:a1cb851913aeb9fe8cc941e4b56bc5cbb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a31469fd213a2351ac3d64bba6694e6ad"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="utilities_8h.html#a31469fd213a2351ac3d64bba6694e6ad">checkPointerOk</a>(p,  <a class="el" href="test_8m.html#ab3cd915d758008bd19d0f2428fbb354a">m</a>)    &#160;&#160;&#160;if (p == NULL) {ROS_ERROR(<a class="el" href="test_8m.html#ab3cd915d758008bd19d0f2428fbb354a">m</a>); return;}</td></tr>
+<tr class="separator:a31469fd213a2351ac3d64bba6694e6ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
-<a class="anchor" id="aa2000e3a201fa6a68f5211c9f1d5b73e"></a>
+<a class="anchor" id="a31469fd213a2351ac3d64bba6694e6ad"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define checkPointerOk</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">p, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname"><a class="el" href="test_8m.html#ab3cd915d758008bd19d0f2428fbb354a">m</a>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td>&#160;&#160;&#160;if (p == NULL) {ROS_ERROR(<a class="el" href="test_8m.html#ab3cd915d758008bd19d0f2428fbb354a">m</a>); return;}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a class="anchor" id="a1cb851913aeb9fe8cc941e4b56bc5cbb"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -118,7 +146,7 @@ Macros</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="ab6b9fe00c7a393037a733ddf652fd482"></a>
+<a class="anchor" id="ac68a5ce7fa0f2b73db3c7b3eefba856c"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">

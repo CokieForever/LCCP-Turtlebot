@@ -97,10 +97,13 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a5d4e730d8c94f0d2c4b80879ce6c2505"><td class="memItemLeft" align="right" valign="top">static SDL_Color&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="deadreckoning_8cpp.html#a5d4e730d8c94f0d2c4b80879ce6c2505">createColor</a> (int r, int g, int b)</td></tr>
+<tr class="memdesc:a5d4e730d8c94f0d2c4b80879ce6c2505"><td class="mdescLeft">&#160;</td><td class="mdescRight">Wrapper to create an SDL_Color structure from RGB components.  <a href="#a5d4e730d8c94f0d2c4b80879ce6c2505">More...</a><br /></td></tr>
 <tr class="separator:a5d4e730d8c94f0d2c4b80879ce6c2505"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2ef978eda295a8d5ff3bfcbafab1c029"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="deadreckoning_8cpp.html#a2ef978eda295a8d5ff3bfcbafab1c029">putPixel</a> (SDL_Surface *surface, int <a class="el" href="test_8m.html#a9336ebf25087d91c818ee6e9ec29f8c1">x</a>, int <a class="el" href="test_8m.html#a2fb1c5cf58867b5bbc9a1b145a86f3a0">y</a>, Uint32 pixel, bool check=true)</td></tr>
+<tr class="memdesc:a2ef978eda295a8d5ff3bfcbafab1c029"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets a pixel of an SDL Surface to a specific color.  <a href="#a2ef978eda295a8d5ff3bfcbafab1c029">More...</a><br /></td></tr>
 <tr class="separator:a2ef978eda295a8d5ff3bfcbafab1c029"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af4b2c1450e620efee0c12d45d861b8ab"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="deadreckoning_8cpp.html#af4b2c1450e620efee0c12d45d861b8ab">drawLine</a> (SDL_Surface *surf, float x1, float y1, float x2, float y2, SDL_Color color)</td></tr>
+<tr class="memdesc:af4b2c1450e620efee0c12d45d861b8ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Draw a line segment on a SDL Surface.  <a href="#af4b2c1450e620efee0c12d45d861b8ab">More...</a><br /></td></tr>
 <tr class="separator:af4b2c1450e620efee0c12d45d861b8ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
@@ -141,6 +144,17 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
+
+<p>Wrapper to create an SDL_Color structure from RGB components. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">r</td><td>The Red component (between 0 and 255). </td></tr>
+    <tr><td class="paramname">g</td><td>The Green component (between 0 and 255). </td></tr>
+    <tr><td class="paramname">b</td><td>The Blue component (between 0 and 255). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The new SDL_Color structure. </dd></dl>
 
 </div>
 </div>
@@ -200,6 +214,20 @@ Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
+<p>Draw a line segment on a SDL Surface. </p>
+<p>The surface should be locked (see SDL_LockSurface()) before calling this function. The line has a thickness of one pixel. Provided coordinates can be outside the surface area. The function comes from here: <a href="http://stackoverflow.com/questions/11737988/how-to-draw-a-line-using-sdl-without-using-external-libraries">http://stackoverflow.com/questions/11737988/how-to-draw-a-line-using-sdl-without-using-external-libraries</a></p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">surf</td><td>The SDL Surface to draw on. </td></tr>
+    <tr><td class="paramname">x1</td><td>The x-coordinate of the first pixel of the line segment. </td></tr>
+    <tr><td class="paramname">y1</td><td>The y-coordinate of the first pixel of the line segment. </td></tr>
+    <tr><td class="paramname">x2</td><td>The x-coordinate of the last pixel of the line segment. </td></tr>
+    <tr><td class="paramname">y2</td><td>The y-coordinate of the last pixel of the line segment. </td></tr>
+    <tr><td class="paramname">color</td><td>The color to use to draw the line. </td></tr>
+  </table>
+  </dd>
+</dl>
+
 </div>
 </div>
 <a class="anchor" id="a2ef978eda295a8d5ff3bfcbafab1c029"></a>
@@ -251,6 +279,20 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
+
+<p>Sets a pixel of an SDL Surface to a specific color. </p>
+<p>The surface should be locked (see SDL_LockSurface()) before calling this function. This function comes from the SDL documentation.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">surface</td><td>The SDL Surface. </td></tr>
+    <tr><td class="paramname">x</td><td>The x-coordinate of the pixel to set. </td></tr>
+    <tr><td class="paramname">y</td><td>The y-coordinate of the pixel to set. </td></tr>
+    <tr><td class="paramname">pixel</td><td>The color to set to the pixel, as a 32-bits unsigned integer (use SDL_MapRGB() / SDL_MapRGBA() to create it). </td></tr>
+    <tr><td class="paramname">check</td><td>True if the provided coordinates must be checked before setting the pixel. If check is False and invalid coordinates are set, this might cause a segfault. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if the pixel was successfully set. </dd></dl>
 
 </div>
 </div>

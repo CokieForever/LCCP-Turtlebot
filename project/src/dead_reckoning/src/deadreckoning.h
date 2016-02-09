@@ -21,15 +21,15 @@
 #include "sdl_gfx/SDL_rotozoom.h"
 
 /**
- * \class Grid
- * \brief Represents the discretized world as a grid containing probabilities of obstacles.
+ * @class Grid
+ * @brief Represents the discretized world as a grid containing probabilities of obstacles.
  */
 class Grid
 {
     public:
         /**
-         * \struct ProbabilisticPoint
-         * \brief A point in the grid, with time stamp and probability of obstacle.
+         * @struct ProbabilisticPoint
+         * @brief A point in the grid, with time stamp and probability of obstacle.
          */
         struct ProbabilisticPoint
         {
@@ -63,7 +63,7 @@ class Grid
         ProbabilisticPoint** m_data;    /*!< Raw data of the grid, as a 1D array of pointers. */
         int m_height;                   /*!< Height of the grid (units). */
         int m_width;                    /*!< Width of the grid (units). */
-        bool m_resizeable;              /*!< Indicated if the grid can be dynamically resized or not. */
+        bool m_resizeable;              /*!< Indicates if the grid can be dynamically resized or not. */
         
         void init();
         void empty();
@@ -72,21 +72,25 @@ class Grid
 };
 
 /**
- * \class DeadReckoning
- * \brief Main class handling the dead reckoning and the odometry of the robot.
+ * @class DeadReckoning
+ * @brief Main class handling the dead reckoning and the odometry of the robot.
  *
  * This class is responsible for estimating the robot's position in the real world according to information provided
  * by the robot's sensors, including wheel sensors, laser scan, inertial sensors, depth images, etc.
  * It will also estimate the position of obstacles, markers and friends, and will keep and provide a map of their positions
- * even if they are not in sight anymore, thus allowing a live build of a world full map.
- * Positions of the robot, the markers and the friends are published via Transformations and the map via a custom message.
+ * even if they are not in sight anymore, thus allowing a live build of a world full map. Two maps are published, one based
+ * on laser scan data and one based on depth image data. The first one is recommended.
+ * The depth images are converted into laser scans which are published and can be used especially to have a precise obstacle avoidance.
+ * Positions of the robot, the markers and the friends are published via Transformations and the map is published via a custom Grid message.
+ * The positions of the maps (upper-left corners) are also published via Transformations.
+ * The class also provides a real time display very useful for debugging.
  */
 class DeadReckoning
 {
     private:
         /**
-         * \struct Vector
-         * \brief A 2D velocity vector, can also be used as a 2D point.
+         * @struct Vector
+         * @brief A 2D velocity vector, can also be used as a 2D point.
          */
         struct Vector
         {
@@ -95,8 +99,8 @@ class DeadReckoning
         };
         
         /**
-         * \struct StampedPos
-         * \brief A 2D position with orientation (z-axis) information and a time stamp.
+         * @struct StampedPos
+         * @brief A 2D position with orientation (z-axis) information and a time stamp.
          */
         struct StampedPos
         {
@@ -173,6 +177,7 @@ class DeadReckoning
         bool m_markerInSight[256];                          /*!< Indicates which markers are still in sight (IDs from 0 to 255).*/
         StampedPos *m_friendsPos;                           /*!< Last known positions of all friends.*/
         bool *m_friendInSight;                              /*!< Indicates which friends are still in sight.*/
+        bool m_ok;                                          /*!< Indicates the instance is ready to start reckoning. */
         
         StampedPos getPosForTime(const ros::Time& time);
         void friendsCallback(const detect_friend::FriendsInfos::ConstPtr& friendsInfos);
@@ -198,6 +203,7 @@ class DeadReckoning
         DeadReckoning(ros::NodeHandle& node, bool simulation=true, double minX=-5, double maxX=5, double minY=-5, double maxY=5);
         ~DeadReckoning();
         void reckon();
+        bool ready();
 };
 
 #endif

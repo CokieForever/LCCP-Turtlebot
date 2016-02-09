@@ -74,7 +74,7 @@ var searchData=
   ['m_5foffsety',['m_offsetY',['../class_dead_reckoning.html#a8c526ef042b4dd3e67c0db364de6d3e0',1,'DeadReckoning']]],
   ['m_5foffsetz',['m_offsetZ',['../class_dead_reckoning.html#a5774327a525300c29b9a628f2b641531',1,'DeadReckoning']]],
   ['m_5foffsetzodom',['m_offsetZOdom',['../class_dead_reckoning.html#a06d9ccde12843e972b0776c2aafefa32',1,'DeadReckoning']]],
-  ['m_5fok',['m_ok',['../class_my_little_cam_recorder.html#a96f69641a3af1c92e0510768846ebe1b',1,'MyLittleCamRecorder::m_ok()'],['../class_my_little_image_broadcaster.html#a725bcb63f9e6b8035937a86f5282d912',1,'MyLittleImageBroadcaster::m_ok()']]],
+  ['m_5fok',['m_ok',['../class_dead_reckoning.html#a2ad96b872240318a0ae55d391819e370',1,'DeadReckoning::m_ok()'],['../class_my_little_cam_recorder.html#a96f69641a3af1c92e0510768846ebe1b',1,'MyLittleCamRecorder::m_ok()'],['../class_my_little_image_broadcaster.html#a725bcb63f9e6b8035937a86f5282d912',1,'MyLittleImageBroadcaster::m_ok()']]],
   ['m_5fordersub',['m_orderSub',['../class_dead_reckoning.html#a699e70494074eb4e184a3a3d383485c2',1,'DeadReckoning']]],
   ['m_5foutofsight',['m_outOfSight',['../class_mover.html#abcd17fab3dd92579d6fd7bdb5c2c580d',1,'Mover']]],
   ['m_5fposition',['m_position',['../class_dead_reckoning.html#aafde59dd4d489b37e4d72eef01887bd4',1,'DeadReckoning']]],
