@@ -19,18 +19,20 @@ class FaceDetection
 public:
 	FaceDetection()
 	{
+
 		b_error = false;
     		face_cascade_name = ros::package::getPath("ga73kec_a3_t3") + "/src/resources/haarcascade_frontalface_alt.xml";
-    		eye_cascade_name = ros::package::getPath("ga73kec_a3_t3") + "/src/resources/haarcascade_eye_tree_eyeglasses.xml";
+    		eyes_cascade_name = ros::package::getPath("ga73kec_a3_t3") + "/src/resources/haarcascade_eye_tree_eyeglasses.xml";
    		if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading face_cascade_name \n"); b_error = true; };
     		if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading eyes_cascade_name \n"); b_error = true; };
+		RNG rng(12345);
      	    		
 	}
 	void StartDetection()
 	{
 
-	     sub =  nh.subscribe("/camera/rgb/image_rect_color", 1, rgbCallback);
-  		depth =  nh.subscribe("/camera/depth/image", 1, depthCallback);
+	     sub =  nh.subscribe("/camera/rgb/image_rect_color", 1, &FaceDetection::rgbCallback,this);
+  		depth =  nh.subscribe("/camera/depth/image", 1, &FaceDetection::depthCallback,this);
 	}
 	bool Status()
 	{
@@ -42,16 +44,16 @@ private:
 	ros::Subscriber sub;
 	ros::NodeHandle nh;
 	ros::Subscriber sub_img;
- 	String face_cascade_name ; 
- 	String eyes_cascade_name ; 
+ 	string face_cascade_name; 
+ 	string eyes_cascade_name; 
  	CascadeClassifier face_cascade;
- 	CascadeClassifier eyes_cascade;
-	RNG rng(12345);
+ 	CascadeClassifier eyes_cascade; 	
+   	 //pointer to cvimage
+	
 
 	 void rgbCallback(const sensor_msgs::ImageConstPtr& msg)
 	 {
-		//pointer to cvimage
-	   	cv_bridge::CvImageConstPtr cv_ptr;
+		cv_bridge::CvImageConstPtr cv_ptr;
 		try
 		{
 		  cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
@@ -79,6 +81,7 @@ private:
 
 	 void depthCallback(const sensor_msgs::ImageConstPtr& msg)
 	 {
+	 cv_bridge::CvImageConstPtr cv_ptr;
 		try
 		{
 		    cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_16UC1);
@@ -123,7 +126,7 @@ private:
 	  //-- Show what you got
 	   cv::imshow("Face Detection", frame);
 	 }
-}
+};
 
 
 
@@ -138,6 +141,6 @@ private:
      }
    ros::spin();
    return 0;
- }
+ };
 
 

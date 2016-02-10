@@ -4,10 +4,11 @@
 #include "movement.hpp"
 #include "geometry_msgs/Twist.h"
 #include <math.h>
-
+/**
+ * @brief Initialization of important parameters and subscription to necessary topics.
+ */
 Mover::Mover()
 {
-    //Variables
     m_turtleSpeed = 0.25;
     m_keepMoving = true;
     m_gotTarget = false;
@@ -16,22 +17,20 @@ Mover::Mover()
     m_searchMarker = 0;
     m_finishedMarkerSearch = false;
     m_outOfSight = true;
-    //distance between marker and turtlebot
     m_distanceToMarker = 9999;
-    //Publishers
     commandPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 10);
     targetReachedRequest = node.advertise<std_msgs::Empty>("targetReached", 10);
     m_driveNow = false;
-    //Subscribers
     turtleStar = node.subscribe("/gotStar",1,&Mover::starCallBack,this);
     laserSub = node.subscribe("/scan", 1, &Mover::scanCallback, this);
     bumperSub = node.subscribe("mobile_base/events/bumper", 20, &Mover::bumperSubCallback, this);
-    //  imageSub = node.subscribe("/camera/rgb/image_rect_color", 10, &Mover::rgbCallback, this);
     getLocationSub = node.subscribe("/markerinfo", 10, &Mover::getLocationCallback, this);
     targetFinishedSub = node.subscribe("targetFinishedTopic", 10, &Mover::targetFinishedCallback, this);
-
 }
-
+/**
+ * @brief Callback function: when a star is recognized, the topic /gotStar triggers the execution
+ * @param star std_msgs::Bool
+ */
 void Mover::starCallBack(const std_msgs::Bool::ConstPtr &star)
 {
     if (star->data)
@@ -43,54 +42,40 @@ void Mover::starCallBack(const std_msgs::Bool::ConstPtr &star)
         m_turtleSpeed /= 1.3;
     }
 }
-
+/**
+ * @brief Use the odometry to drive a given distance (in meters)
+ * @param distance in meters
+ */
 void Mover::driveForwardOdom(double distance)
 {
-
-    //we will be sending commands of type "twist"
     geometry_msgs::Twist base_cmd;
-
-    //the command will be to go forward at 0.2 m/s
     base_cmd.linear.y = base_cmd.angular.z = 0;
     base_cmd.linear.x = m_turtleSpeed;
-
     ros::Rate rate(100.0);
     double distanceMoved = 0;
     ros::Time startTime = ros::Time::now();
-
-    //while((t[s]*v[m/s] = travelled distance[m] < distance[m] )
     while (((ros::Time::now()-startTime).toSec()*0.2 < distance) && node.ok() && m_keepMoving)
     {
         base_cmd.linear.y = base_cmd.angular.z = 0;
         base_cmd.linear.x = m_turtleSpeed;
-        //send the drive command
         commandPub.publish(base_cmd);
         rate.sleep();
-        //distanceMoved = (ros::Time::now()-startTime).toSec()*0.2;
-        //ROS_INFO("distance %f", distanceMoved);
         ros::spinOnce();
         rate.sleep();
     }
 
 }
-
-
+/**
+ * @brief Use the odometry to rotate the turtlebot by a given number of degrees
+ * @param angle in degrees
+ */
 void Mover::rotateOdom(double angle)
 {
-
-    //wait for the listener to get the first message
     listener.waitForTransform("base_footprint", "/odom", ros::Time(0), ros::Duration(1.0));
-
-    //we will record transforms here
     tf::StampedTransform start_transform;
     tf::StampedTransform current_transform;
-
-    //record the starting transform from the odometry to the base frame
     listener.lookupTransform("base_footprint", "/odom", ros::Time(0), start_transform);
-
-    //we will be sending commands of type "twist"
     geometry_msgs::Twist base_cmd;
-    //the command will be to rotate at 0.25 m/s
     if(angle<0)
     {
         base_cmd.linear.y = base_cmd.linear.x = 0;
@@ -101,29 +86,16 @@ void Mover::rotateOdom(double angle)
         base_cmd.linear.y = base_cmd.linear.x = 0;
         base_cmd.angular.z = -0.45;
     }
-
     bool done = false;
-
-    //get original angle in RAD
     tfScalar originAngle = tf::getYaw(start_transform.getRotation());
-    // ROS_INFO("original angle %f", originAngle);
-
-    //bool needed to check if while loop has already passed first time
     bool runFirstTime = true;
-
     ros::Rate rate2(100);
-    //Run loop until rotation has been done
     while (!done && node.ok() ) //&& !m_gotTarget
     {
         tfScalar relativeAngle, currentAngle, previousAngle;
-
-        //send the rotation command
         commandPub.publish(base_cmd);
         rate2.sleep();
-
         if(runFirstTime==false){previousAngle = currentAngle;}
-
-        //get the current transform
         try
         {
             listener.lookupTransform("base_footprint", "/odom", ros::Time(0), current_transform);
@@ -133,24 +105,15 @@ void Mover::rotateOdom(double angle)
             ROS_ERROR("%s",ex.what());
             break;
         }
-
-        //get current Angle in RAD
         currentAngle = tf::getYaw(current_transform.getRotation());
-
-        //see if there was a jump in the current Angle (to avoid problem with jump from -PI to +PI and vice versa)
         if(runFirstTime==false && fabs((currentAngle-previousAngle)) > 2.0)
         {
             currentAngle = (currentAngle + 2*M_PI);
             double difference = fabs((currentAngle-previousAngle));
-            //   ROS_INFO("difference %f", difference);
         }
-
-        //calculate already absolved angle
         relativeAngle = currentAngle - originAngle;
         relativeAngle = ((relativeAngle*180.0)/M_PI);
         runFirstTime = false;
-
-        //check if rotation is done
         if(relativeAngle>angle)
         {
             done=true;
@@ -165,16 +128,16 @@ void Mover::rotateOdom(double angle)
     ros::spinOnce();
 }
 
-
-//Callback of the /scan topic. Checks wether an obstacle disturbs forward movement
+/**
+ * @brief Callback of the /scan topic. Checks wether an obstacle disturbs forward movement
+ * @param scan sensor_msgs::LaserScan
+ */
 void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
     int minIndex = ceil((MIN_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
     int maxIndex = floor((MAX_SCAN_ANGLE_RAD - scan->angle_min) / scan->angle_increment);
     ros::Rate rate(10);
-    //float closestRange = scan->ranges[minIndex];
     float closestRange = scan->ranges[minIndex];
-    //save distance between robot and marker (which is in the center)
     if(scan->ranges[0]<=10 && scan->ranges[0]!=INFINITY){
         m_distanceToMarker = scan->ranges[0];
     }
@@ -186,30 +149,12 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
             closestRange =	scan->ranges[currIndex];
         }
     }
-    //ROS_INFO("closest range = %f", closestRange);
     if(closestRange < MIN_PROXIMITY_RANGE_M)
     {
         m_keepMoving=false;
-        //rotate only if not approaching target
         ROS_INFO("Obstacle in %f Turn 25 degrees!", closestRange);
         rotateOdom(25);
         rate.sleep();
-     /*  ros::Time timer = ros::Time::now();
-        while((ros::Time::now() - timer).toSec() < 2.0)
-        {
-            geometry_msgs::Twist msg;
-            msg.linear.x = 0.3;
-            msg.angular.z = 0.0;
-            commandPub.publish(msg);
-            ros::spinOnce();
-            rate.sleep();
-        }*/
-      //  m_driveNow = true;
-       // driveForwardOdom(0.7);
-       // rate.sleep();
-       // m_driveNow = false;
-        //rotateOdom(-90);
-
     }
     else
     {
@@ -217,8 +162,10 @@ void Mover::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
     }
     ros::spinOnce();
 }
-
-//Callback function for the bumperSub event. Stops the forward movement and initiates an rotation
+/**
+ * @brief Callback function for the bumperSub event. Stops the forward movement and initiates a rotation
+ * @param bumperSub_msg kobuki_msgs::BumperEvent
+ */
 void Mover::bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumperSub_msg)
 {
     if(bumperSub_msg->state)
@@ -233,33 +180,31 @@ void Mover::bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumperSu
             break;
         default:  ROS_INFO("I bumped a ghost :P");
         }
-
-        //Move backwards
         geometry_msgs::Twist base_cmd;
         base_cmd.linear.y = base_cmd.angular.z = 0;
         base_cmd.linear.x = -1 * m_turtleSpeed;
-        commandPub.publish(base_cmd);//drive backwards
-        ros::Duration(0.5).sleep(); // sleep for half a second
+        commandPub.publish(base_cmd);
+        ros::Duration(0.5).sleep();
         m_keepMoving=false;
         rotateOdom(45);
         ros::spinOnce();
     }
 }
-
+/**
+ * @brief Old method used to approach a marker given from the detect_marker node.
+ * @param param_marker_id integer
+ */
 void Mover::approachMarker(int param_marker_id)
 {
     ros::Rate rateX(20);
     geometry_msgs::Twist vel_msg;
-    //save old distance to check if object is valid
     static float f_distance_old = m_distanceToMarker; // save
     bool b_invalid_object = false;
-
     vel_msg.angular.z = m_angularVelocity;
     if (m_distanceToMarker > 1.5)
         vel_msg.linear.x = 0.5;
     else
         vel_msg.linear.x = 0.3* m_distanceToMarker;
-    //decrease velocity as bot gets closer to target
     commandPub.publish(vel_msg);
     if (f_distance_old != m_distanceToMarker)
     {
@@ -274,7 +219,6 @@ void Mover::approachMarker(int param_marker_id)
             b_invalid_object = false;
         f_distance_old = m_distanceToMarker;
     }
-    //return the robot to its correct course
     commandPub.publish(vel_msg);
     if ((m_distanceToMarker<=0.7) && m_gotTarget && (param_marker_id == m_searchMarker) && !b_invalid_object)
     {
@@ -300,46 +244,36 @@ void Mover::approachMarker(int param_marker_id)
     rateX.sleep();
     ros::spinOnce();
 }
-
+/**
+ * @brief Callback function that is triggered when a marker array is sent on the /markerinfo topic. Contains commented code that uses the old approach marker function, in case tf doesn't work well.
+ * @param marker_msg detect_marker::MarkersInfos
+ */
 void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &marker_msg)
 {
     if (marker_msg->infos.size() || m_gotTarget && m_keepMoving)
     {
-        //ROS_INFO("location callback!");
-        //map the coordiante to the center
         int i_array_length = marker_msg->infos.size();
         float f_Xm = 0.0;
-        //float f_Ym = marker_msg->infos[i].y;
         int i_marker_id = 0;
         m_outOfSight = false;
         for (int i=0; i<i_array_length; i++)
         {
-            //check if marker id is equal to the next id that the bot is searching
             if (marker_msg->infos[i].id == m_searchMarker)
             {
                 f_Xm = marker_msg->infos[i].x;
                 m_driveNow = false;
-                //got a new target!
                 i_marker_id = marker_msg->infos[i].id;
                 m_gotTarget = true;
                 m_reachedTarget = false;
             }
         }
-
-        //ROS_INFO("Location of marker: %f", f_Xm);
-        //was if (!m_reachedTarget && f_Xm!=0.0 && m_gotTarget)
         ros::Rate rate(50);
-
-        while (m_gotTarget) //  was && m_outOfSight
+        while (m_gotTarget)
         {
-            //move to transform approach
-            //TF - decrease distance to target
             tf::StampedTransform transform_marker;
             char goalMarker[100];
-            // listen to tf of next marker position
             snprintf(goalMarker,100, "deadreckoning_markerpos_%d",m_searchMarker);
             try{
-                //Listen to transformations: Position of robot and position of marker
                 m_coordinateListener.lookupTransform("deadreckoning_robotpos", goalMarker,
                                                      ros::Time(0), transform_marker);
             }
@@ -349,15 +283,13 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
                 continue;
             }
             geometry_msgs::Twist vel_msg;
-            // decrease distance between robot and marker, while avoiding obstacles;
             float f_distance_to_marker = sqrt(pow(transform_marker.getOrigin().x(), 2) +
                                               pow(transform_marker.getOrigin().y(), 2));
-            if ( (f_distance_to_marker <= 0.5)) //m_distanceToMarker <= 0.7 &&
+            if ( (f_distance_to_marker <= 0.5))
             {
                 m_gotTarget = false;
                 vel_msg.angular.z = 0;
                 vel_msg.linear.x = 0;
-                //search for next marker
                 m_searchMarker++;
                 ROS_INFO("I'm too close to the marker, search next: %d", m_searchMarker);
             }
@@ -376,8 +308,7 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
             ros::spinOnce();
             rate.sleep();
         }
-        //ros::spinOnce();
-        /* Back-up plan
+        /* Back-up plan: if it doesn't work with tf use old function approachMarker();
         if (!m_reachedTarget && m_gotTarget && !m_outOfSight)
         {
             //adjust robot, so the marker actually is in the center
@@ -406,7 +337,10 @@ void Mover::getLocationCallback(const detect_marker::MarkersInfos::ConstPtr &mar
     }
     ros::spinOnce();
 }
-
+/**
+ * @brief Callback function that is called when the turtlebot reached all targets.
+ * @param empty std_msgs::Empty
+ */
 void Mover::targetFinishedCallback(const std_msgs::EmptyConstPtr empty)
 {
     m_gotTarget = false;
@@ -414,19 +348,21 @@ void Mover::targetFinishedCallback(const std_msgs::EmptyConstPtr empty)
     driveForwardOdom(0.5);
     rotateOdom(358);
 }
+/**
+ * @brief The parameters of the random movement are given randomly.
+ */
 void Mover::moveRandomly()
 {
-
     srand(time(NULL));
     double randDist = 1.0*((double) rand() / (RAND_MAX));
     double randAngle = 90.0*((double) rand() / (RAND_MAX));
-    // ROS_INFO("Random Angle = %f", randAngle);
     rotateOdom(randAngle);
-    //ROS_INFO("Random Distance = %f", randDist);
     driveForwardOdom(randDist);
     ROS_INFO("RAndom Walk");
 }
-//Method which will be called from run_stopper.cpp
+/**
+ * @brief Method which will be called from run_stopper.cpp to start the movement.
+ */
 void Mover::startMoving()
 {
     ros::Rate rate(100);
@@ -440,7 +376,6 @@ void Mover::startMoving()
         }
         else
         {
-            //   driveForwardOdom(0.2);
             if (m_finishedMarkerSearch)
             {
                 ROS_INFO("Done!");

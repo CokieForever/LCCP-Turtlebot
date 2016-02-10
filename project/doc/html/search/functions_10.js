@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['targetfinishedcallback',['targetFinishedCallback',['../class_mover.html#ad8aa3e15ae15b68adb53f876c8b34134',1,'Mover::targetFinishedCallback(const std_msgs::EmptyConstPtr empty)'],['../class_mover.html#ad8aa3e15ae15b68adb53f876c8b34134',1,'Mover::targetFinishedCallback(const std_msgs::EmptyConstPtr empty)']]],
-  ['thresh_5fcallback',['thresh_callback',['../colorfilter_8cpp.html#a22db37ec3597b0a303153c25efa8f0f2',1,'colorfilter.cpp']]],
-  ['title',['title',['../test_8m.html#ada71f1837d2709959a4bc3535528eb9f',1,'title(&apos;Restored Image&apos;):&#160;test.m'],['../test_8m.html#a72fdb34db893caa6514ddcd3cdd6bb88',1,'title(&apos;Original Image&apos;):&#160;test.m']]]
+  ['updatedisplay',['updateDisplay',['../class_dead_reckoning.html#ac092492287f841534c1ebea3ff83ea14',1,'DeadReckoning::updateDisplay()'],['../class_sensor_display.html#aa38c5884e6a2b76a7b967a9441d45112',1,'SensorDisplay::updateDisplay()']]],
+  ['updategridfromoccupancy',['updateGridFromOccupancy',['../class_dead_reckoning.html#a398015a120b83ca2d1cb9f6ca93e7dd4',1,'DeadReckoning']]],
+  ['updatesize',['updateSize',['../class_grid.html#a9b5dfb4b19dc1852e2c013ffe6218b86',1,'Grid']]]
 ];
