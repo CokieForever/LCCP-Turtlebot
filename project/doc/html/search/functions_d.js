@@ -1,15 +1,10 @@
 var searchData=
 [
-  ['pointcloudtolaserscan',['pointCloudToLaserScan',['../class_dead_reckoning.html#ae529023756847b3142b8dd5d477709d2',1,'DeadReckoning']]],
-  ['precision',['precision',['../class_grid.html#a22a0341fa8248ffac73b2c223afb3f57',1,'Grid']]],
-  ['processlaserscan',['processLaserScan',['../class_dead_reckoning.html#a3364914581a414353c4207f7c41f7173',1,'DeadReckoning']]],
-  ['proximityalert',['proximityAlert',['../classinitial__detection.html#aee7244607f0e1460bda349bf9e914dad',1,'initial_detection']]],
-  ['psf',['PSF',['../test_8m.html#aa2020f3acbadf2b5c6ebb2657c8c2926',1,'test.m']]],
-  ['publish_5finfos_5fof_5ffriend',['publish_infos_of_friend',['../class_detect_friend.html#a2772d1e8a72cd7909558a89ecbf98f47',1,'DetectFriend']]],
-  ['publishanddrawmarkers',['publishAndDrawMarkers',['../class_detect_marker.html#ace22d0fd7cd63bf4cba19050b30e4758',1,'DetectMarker']]],
-  ['publishfriendstransforms',['publishFriendsTransforms',['../class_dead_reckoning.html#a9da7ec32638d43ee00f1f7e9fa6c9a65',1,'DeadReckoning']]],
-  ['publishgrid',['publishGrid',['../class_dead_reckoning.html#aa580b8202c96f539ca847f9422086b7c',1,'DeadReckoning']]],
-  ['publishmarkerstransforms',['publishMarkersTransforms',['../class_dead_reckoning.html#a4aa71b98d9c95f873a63d0bad3c8f18b',1,'DeadReckoning']]],
-  ['publishtransforms',['publishTransforms',['../class_dead_reckoning.html#aafaa31a788b4181d8b25d83edd127d49',1,'DeadReckoning']]],
-  ['putpixel',['putPixel',['../deadreckoning_8cpp.html#a2ef978eda295a8d5ff3bfcbafab1c029',1,'putPixel(SDL_Surface *surface, int x, int y, Uint32 pixel, bool check=true):&#160;deadreckoning.cpp'],['../sensordisplay_8cpp.html#a2ef978eda295a8d5ff3bfcbafab1c029',1,'putPixel(SDL_Surface *surface, int x, int y, Uint32 pixel, bool check=true):&#160;sensordisplay.cpp']]]
+  ['readme',['readme',['../detect__friend__orb_8cpp.html#ad1da5b031c05c05e0c2c2f5a0c2e1c70',1,'detect_friend_orb.cpp']]],
+  ['ready',['ready',['../class_dead_reckoning.html#a56b397a8eec5046f737c60273828ca33',1,'DeadReckoning']]],
+  ['reckon',['reckon',['../class_dead_reckoning.html#a1fa7dd22817ea9f70e1ddf9154aac341',1,'DeadReckoning']]],
+  ['record',['record',['../class_my_little_cam_recorder.html#ad7a0142b4825aed81f15a39a1fb7a8aa',1,'MyLittleCamRecorder']]],
+  ['removeisolatedpixels',['removeIsolatedPixels',['../class_friend_matcher.html#a2f83e4eefb5e6047c4086f1714d9c9c4',1,'FriendMatcher::removeIsolatedPixels()'],['../class_o_r_b_detector.html#a7876bc66c70d2b0a28c764e344a9740e',1,'ORBDetector::removeIsolatedPixels()']]],
+  ['rng',['rng',['../colorfilter_8cpp.html#a2bb3a617236eb1bd8ace5e140f519081',1,'colorfilter.cpp']]],
+  ['rotateodom',['rotateOdom',['../class_mover.html#ae0333b0f4d8033a5c5a9a61662550cab',1,'Mover']]]
 ];

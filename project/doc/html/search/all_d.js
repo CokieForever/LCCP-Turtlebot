@@ -5,6 +5,5 @@ var searchData=
   ['nb_5fdepthcloudpoints',['NB_DEPTHCLOUDPOINTS',['../class_sensor_display.html#ac69415e6eb85d3eded9e19f0960d3681',1,'SensorDisplay']]],
   ['nb_5ffriends',['NB_FRIENDS',['../class_dead_reckoning.html#ae997ccbf14766074eaf46077335c4088',1,'DeadReckoning']]],
   ['nb_5fscancloudpoints',['NB_SCANCLOUDPOINTS',['../class_sensor_display.html#af8564fad602aff2857f3aff9af991edf',1,'SensorDisplay']]],
-  ['newresult',['newResult',['../turtlebot__ui_2src_2super__mario_2super__mario_8cpp.html#af1aa73cf38400fdf1e2e8d2897484f22',1,'super_mario.cpp']]],
   ['node',['node',['../class_mover.html#aecc80cc9ae532cf7d06f49d4736cb731',1,'Mover']]]
 ];
