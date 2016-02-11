@@ -1,0 +1,13 @@
+material ar_marker_id1/Diffuse
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture ar_marker_id1.png
+      }
+    }
+  }
+}
