@@ -8,5 +8,5 @@ var searchData=
   ['boundingrect',['boundingRect',['../struct_friend_matcher_1_1_match_result.html#a5844b8bb61044b0d5d8efb2fea3aa248',1,'FriendMatcher::MatchResult']]],
   ['broadcast',['broadcast',['../class_my_little_image_broadcaster.html#a16d66182aeabe40ad1384acb5b224c77',1,'MyLittleImageBroadcaster']]],
   ['bumpersub',['bumperSub',['../class_mover.html#a3a315a9814f274aae6ed028252ff5502',1,'Mover']]],
-  ['bumpersubcallback',['bumperSubCallback',['../class_mover.html#a330b49d765dff39702aa7fc63aa49033',1,'Mover::bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr &amp;bumper_msg)'],['../class_mover.html#a330b49d765dff39702aa7fc63aa49033',1,'Mover::bumperSubCallback(const kobuki_msgs::BumperEvent::ConstPtr &amp;bumper_msg)']]]
+  ['bumpersubcallback',['bumperSubCallback',['../class_mover.html#a330b49d765dff39702aa7fc63aa49033',1,'Mover']]]
 ];

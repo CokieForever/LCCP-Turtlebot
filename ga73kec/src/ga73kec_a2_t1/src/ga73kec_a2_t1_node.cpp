@@ -5,16 +5,20 @@
 #include <stdio.h>
 #include <sstream>
 
-
 class MoveTurtle
 {
 public:
-	MoveTurtle(char * name) 
+	MoveTurtle(std::string name)
 	{
-		sprintf(buffer_cmd_vel,"/%s/cmd_vel",name);
-		sprintf(buffer_pose,"/%s/pose",name);
+		buffer_cmd_vel = "/";
+		buffer_cmd_vel += name;
+		buffer_cmd_vel += "/cmd_vel";
+		buffer_pose = "/";
+		buffer_pose += name;
+		buffer_pose += "/pose";
+		
 		vel_pub = n.advertise<geometry_msgs::Twist>(buffer_cmd_vel,100);
-		pose_sub = n.subscribe(buffer_pose, 100, poseCallback);
+		pose_sub = n.subscribe(buffer_pose, 100, &MoveTurtle::poseCallback,this);
 		ROS_INFO("ECLIPSEInitial location: x=%.2f, y=%.2f",ts_pose.x, ts_pose.y);
 	}
 	void StartMoving()
@@ -24,13 +28,14 @@ public:
 	}
 private:
 	//attributes
-	char buffer_cmd_vel[100];
-	char buffer_pose[100];
-	const double x_min = 0.0;
-	const double y_min = 0.0;
-	const double x_max = 11.0;
-	const double y_max = 11.0;
-	const double PI = 3.14156;
+	std::string  buffer_cmd_vel;	
+	std::string  buffer_pose;
+	double x_min = 0.0;
+	double y_min = 0.0;
+	double x_max = 11.0;
+	double y_max = 11.0;
+	double PI = 3.14156;
+	ros::NodeHandle n;
 	ros::Publisher vel_pub;
 	ros::Subscriber pose_sub;
 	turtlesim::Pose ts_pose;
@@ -109,7 +114,7 @@ private:
 			vel_pub.publish(vel_msg);
 	}
 	
-}
+};
 
 
 
@@ -119,12 +124,11 @@ private:
 int main(int argc, char **argv)
 {
 		ros::init(argc, argv, "ga73kec_a1_t1_node");
-		ros::NodeHandle n;
 		MoveTurtle turtle("turtle1");
 		ros::Rate loop_rate(100);
 		while(ros::ok())
 		{
-			turlte.StartMoving();
+			turtle.StartMoving();
 			ros::spinOnce();
 			loop_rate.sleep();
 		}//while ((ts_pose.x < x_max && ts_pose.x > x_min) &&

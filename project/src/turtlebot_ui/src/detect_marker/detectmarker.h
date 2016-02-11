@@ -13,7 +13,10 @@
 #include "turtlebot_ui/MarkerInfo.h"
 #include "turtlebot_ui/MarkersInfos.h"
 #include <iostream>
-
+/**
+ * @brief DetectMarker class is modified in order to work with QT.
+ * Every output can be sent to the user interface via signals.
+ */
 class DetectMarker : public QObject
 {
   Q_OBJECT
@@ -24,10 +27,8 @@ class DetectMarker : public QObject
         void Detect();
 
     Q_SIGNALS:
-        void si_status_togui(QString);
-        void si_togui_frame(cv::Mat &);
-
-
+        void si_status_togui(QString); ///< signal to send the status message to the UI
+        void si_togui_frame(cv::Mat &); ///< signal to send the image frames to the UI
     private:
         struct Point
         {
