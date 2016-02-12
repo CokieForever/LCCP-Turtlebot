@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['orbdetector',['ORBDetector',['../class_o_r_b_detector.html',1,'']]],
-  ['orbmatchresult',['ORBMatchResult',['../struct_o_r_b_detector_1_1_o_r_b_match_result.html',1,'ORBDetector']]]
+  ['point',['Point',['../struct_detect_marker_1_1_point.html',1,'DetectMarker']]],
+  ['probabilisticpoint',['ProbabilisticPoint',['../struct_grid_1_1_probabilistic_point.html',1,'Grid']]]
 ];

@@ -1,7 +1,7 @@
 var searchData=
 [
   ['saveanddisplay',['saveAndDisplay',['../class_my_little_cam_recorder.html#a728bda07a5eefe19c4efc50ede706e2a',1,'MyLittleCamRecorder']]],
-  ['scancallback',['scanCallback',['../class_dead_reckoning.html#ac1a2d50be4fca1f2a402ee0c04143d42',1,'DeadReckoning::scanCallback()'],['../class_sensor_display.html#adfa15f6fc4eeab1c49d09cbf7ad27e49',1,'SensorDisplay::scanCallback()'],['../classinitial__detection.html#ab4c1b83ac03f6284236543d0bbb7cb30',1,'initial_detection::scanCallback()'],['../class_mover.html#a1c3ccbdb710012699c29b003ac835914',1,'Mover::scanCallback()']]],
+  ['scancallback',['scanCallback',['../class_dead_reckoning.html#ac1a2d50be4fca1f2a402ee0c04143d42',1,'DeadReckoning::scanCallback()'],['../class_sensor_display.html#adfa15f6fc4eeab1c49d09cbf7ad27e49',1,'SensorDisplay::scanCallback()'],['../class_mover.html#a1c3ccbdb710012699c29b003ac835914',1,'Mover::scanCallback()']]],
   ['scangridpos_5ftransform_5fname',['SCANGRIDPOS_TRANSFORM_NAME',['../class_dead_reckoning.html#ab764791248327bca9b652f913a3a2345',1,'DeadReckoning']]],
   ['score',['score',['../struct_friend_matcher_1_1_match_result.html#aa3b42c40e342bec3754c7207f85770b2',1,'FriendMatcher::MatchResult::score()'],['../struct_o_r_b_detector_1_1_o_r_b_match_result.html#a1e26c2d03df4e5528f71907ca5d60e8b',1,'ORBDetector::ORBMatchResult::score()']]],
   ['screen_5fheight',['SCREEN_HEIGHT',['../class_dead_reckoning.html#a8e7bbcc067133d847b76306ab361743c',1,'DeadReckoning::SCREEN_HEIGHT()'],['../class_sensor_display.html#a647b83dd12b4e64962518b204afeb0af',1,'SensorDisplay::SCREEN_HEIGHT()']]],
@@ -14,12 +14,9 @@ var searchData=
   ['sl_5ffrom_5fdm_5fframe',['sl_from_dm_frame',['../class_main_window.html#a68819ebc2d7dd7d145c980da91e0b1f6',1,'MainWindow']]],
   ['sl_5frun_5fdetect_5fmarker',['sl_run_detect_marker',['../class_main_window.html#aaf212a4088d885857238fdc9b698fc10',1,'MainWindow']]],
   ['splitimageandzoom',['splitImageAndZoom',['../class_o_r_b_detector.html#aae9f0ead0ef26fa0d256953197d5f240',1,'ORBDetector::splitImageAndZoom()'],['../class_detect_marker.html#aa0d97a7bc3169c34ffb31415791f8623',1,'DetectMarker::splitImageAndZoom()']]],
-  ['src',['src',['../colorfilter_8cpp.html#a1e913916bcdcdedea73cf90ec6381373',1,'colorfilter.cpp']]],
   ['stampedpos',['StampedPos',['../struct_dead_reckoning_1_1_stamped_pos.html',1,'DeadReckoning']]],
-  ['star',['star',['../colorfilter_8cpp.html#ac917bc78120c4ddc15c874afb6be8a34',1,'colorfilter.cpp']]],
   ['star_5fheight',['STAR_HEIGHT',['../class_detect_friend.html#aaf4564e031417f4edc138ff2969303b5',1,'DetectFriend']]],
   ['star_5fimage',['star_image',['../class_detect_friend.html#a8437dc96dd58e731de3c5b1decec7579',1,'DetectFriend']]],
   ['starcallback',['starCallBack',['../class_mover.html#a46ff26acc935fc5d0dc11574ddd29be6',1,'Mover']]],
-  ['startmoving',['startMoving',['../class_mover.html#a69b44de3052dfb45dc70c4d52bfd6f11',1,'Mover']]],
-  ['startrotating',['startRotating',['../classinitial__detection.html#aa55cb5842c20ff5c7fa062a89cdd94ce',1,'initial_detection']]]
+  ['startmoving',['startMoving',['../class_mover.html#a69b44de3052dfb45dc70c4d52bfd6f11',1,'Mover']]]
 ];

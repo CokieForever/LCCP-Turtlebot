@@ -870,7 +870,11 @@ EXCLUDE                = src/lama_msgs/ \
                          src/aruco_msgs/ \
                          src/dead_reckoning/src/sdl_gfx/ \
                          src/super_mario/ \
-                         src/turtlebot_ui/src/detect_marker/
+                         src/turtlebot_ui/src/detect_marker/ \
+                         src/detect_friend_orb \
+                         src/detect_friend2 \
+                         src/friend_recognition \
+                         src/initial_detection
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
