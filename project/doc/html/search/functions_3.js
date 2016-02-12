@@ -1,7 +1,6 @@
 var searchData=
 [
   ['camerasubcallback',['cameraSubCallback',['../class_detect_friend.html#af1b6cb10efd85db1a1b99e1c0ac7dd5d',1,'DetectFriend::cameraSubCallback()'],['../class_detect_marker.html#ab4678c6922f52a3d1bdc1daf3e3c35a4',1,'DetectMarker::cameraSubCallback()']]],
-  ['clusters',['clusters',['../class_detect_friend2.html#a628cb4ccbd8e3d04f0f0f89c475769f9',1,'DetectFriend2']]],
   ['comparebinaryimages',['compareBinaryImages',['../class_friend_matcher.html#ad29791890c54cd7a223b14964e61bc1a',1,'FriendMatcher']]],
   ['computedistanceimage',['computeDistanceImage',['../class_friend_matcher.html#ac411f7cb95d5c7263e3aa1408c1cd0aa',1,'FriendMatcher']]],
   ['computelinesintersection',['ComputeLinesIntersection',['../class_detect_friend.html#ae5c9f0b433e110487a441b616c35abb7',1,'DetectFriend::ComputeLinesIntersection()'],['../class_detect_marker.html#a4b6a8cab68df15d53fa47a39811d019e',1,'DetectMarker::ComputeLinesIntersection()']]],

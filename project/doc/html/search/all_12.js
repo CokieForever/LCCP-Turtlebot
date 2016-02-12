@@ -6,7 +6,6 @@ var searchData=
   ['targetreachedrequest',['targetReachedRequest',['../class_mover.html#a0605d3e8ec10d7b9ef78c78b45345bdb',1,'Mover']]],
   ['templateinfo',['TemplateInfo',['../struct_friend_matcher_1_1_template_info.html',1,'FriendMatcher']]],
   ['test_2em',['test.m',['../test_8m.html',1,'']]],
-  ['thresh_5fcallback',['thresh_callback',['../colorfilter_8cpp.html#a22db37ec3597b0a303153c25efa8f0f2',1,'colorfilter.cpp']]],
   ['title',['title',['../test_8m.html#ada71f1837d2709959a4bc3535528eb9f',1,'title(&apos;Restored Image&apos;):&#160;test.m'],['../test_8m.html#a72fdb34db893caa6514ddcd3cdd6bb88',1,'title(&apos;Original Image&apos;):&#160;test.m']]],
   ['turtlestar',['turtleStar',['../class_mover.html#a9785b6a317f4c80bf0b42cc1fbbff856',1,'Mover']]]
 ];

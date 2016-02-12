@@ -3,7 +3,6 @@ var searchData=
   ['pointcloudtolaserscan',['pointCloudToLaserScan',['../class_dead_reckoning.html#ae529023756847b3142b8dd5d477709d2',1,'DeadReckoning']]],
   ['precision',['precision',['../class_grid.html#a22a0341fa8248ffac73b2c223afb3f57',1,'Grid']]],
   ['processlaserscan',['processLaserScan',['../class_dead_reckoning.html#a3364914581a414353c4207f7c41f7173',1,'DeadReckoning']]],
-  ['proximityalert',['proximityAlert',['../classinitial__detection.html#aee7244607f0e1460bda349bf9e914dad',1,'initial_detection']]],
   ['psf',['PSF',['../test_8m.html#aa2020f3acbadf2b5c6ebb2657c8c2926',1,'test.m']]],
   ['publish_5finfos_5fof_5ffriend',['publish_infos_of_friend',['../class_detect_friend.html#a2772d1e8a72cd7909558a89ecbf98f47',1,'DetectFriend']]],
   ['publishanddrawmarkers',['publishAndDrawMarkers',['../class_detect_marker.html#ace22d0fd7cd63bf4cba19050b30e4758',1,'DetectMarker']]],
