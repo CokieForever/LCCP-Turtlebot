@@ -2,9 +2,9 @@ var searchData=
 [
   ['camerasubcallback',['cameraSubCallback',['../class_detect_friend.html#af1b6cb10efd85db1a1b99e1c0ac7dd5d',1,'DetectFriend::cameraSubCallback()'],['../class_detect_marker.html#ab4678c6922f52a3d1bdc1daf3e3c35a4',1,'DetectMarker::cameraSubCallback()']]],
   ['camrecord_2ecpp',['camrecord.cpp',['../camrecord_8cpp.html',1,'']]],
-  ['checkpointerok',['checkPointerOk',['../utilities_8h.html#a8950e02d8c0c4685a4b43ca9068ba262',1,'utilities.h']]],
-  ['checkrosok',['checkRosOk',['../utilities_8h.html#aa2000e3a201fa6a68f5211c9f1d5b73e',1,'utilities.h']]],
-  ['checkrosok_5fv',['checkRosOk_v',['../utilities_8h.html#ab6b9fe00c7a393037a733ddf652fd482',1,'utilities.h']]],
+  ['checkpointerok',['checkPointerOk',['../utilities_8h.html#a31469fd213a2351ac3d64bba6694e6ad',1,'utilities.h']]],
+  ['checkrosok',['checkRosOk',['../utilities_8h.html#a1cb851913aeb9fe8cc941e4b56bc5cbb',1,'utilities.h']]],
+  ['checkrosok_5fv',['checkRosOk_v',['../utilities_8h.html#ac68a5ce7fa0f2b73db3c7b3eefba856c',1,'utilities.h']]],
   ['clc',['clc',['../autocov_8m.html#a3f3d3b13a15c726d6aa03db3dd0d6377',1,'clc():&#160;autocov.m'],['../test_8m.html#a3f3d3b13a15c726d6aa03db3dd0d6377',1,'clc():&#160;test.m']]],
   ['clear',['clear',['../autocov_8m.html#aebfdce4f6cc7241ba38924f77a12e7cf',1,'clear():&#160;autocov.m'],['../test_8m.html#aebfdce4f6cc7241ba38924f77a12e7cf',1,'clear():&#160;test.m']]],
   ['clusters',['clusters',['../class_detect_friend2.html#a628cb4ccbd8e3d04f0f0f89c475769f9',1,'DetectFriend2']]],
