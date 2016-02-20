@@ -1,8 +1,0 @@
-prefix=/home/ga73kec/group7/devel
-
-Name: ga73kec_says_hello
-Description: Description of ga73kec_says_hello
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/ga73kec/group7/devel/lib 
-Requires: 
