@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(ga76jug_says_hello)
+project(assignment2)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -99,8 +100,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES ga76jug_says_hello
-#  CATKIN_DEPENDS rosconsole roscpp rostime
+#  LIBRARIES assignement2
+#  CATKIN_DEPENDS roscpp tf2
 #  DEPENDS system_lib
 )
 
@@ -116,24 +117,29 @@ include_directories(
 )
 
 ## Declare a C++ library
-# add_library(ga76jug_says_hello
-#   src/${PROJECT_NAME}/ga76jug_says_hello.cpp
+# add_library(assignement2
+#   src/${PROJECT_NAME}/assignement2.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(ga76jug_says_hello ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(assignement2 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-add_executable(hello_world_node src/hello_world_node.cpp)
+add_executable(turtle_controller src/exercise1.cpp src/exercise1_run.cpp)
+add_executable(exercise2 src/exercise2.cpp src/exercise2_run.cpp)
+add_executable(stopper src/Stopper.cpp src/run_stopper.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(ga76jug_says_hello_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(assignement2_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(hello_world_node ${catkin_LIBRARIES})
+target_link_libraries(turtle_controller ${catkin_LIBRARIES})
+target_link_libraries(exercise2 ${catkin_LIBRARIES})
+target_link_libraries(stopper ${catkin_LIBRARIES})
+# )
 
 #############
 ## Install ##
@@ -150,7 +156,7 @@ target_link_libraries(hello_world_node ${catkin_LIBRARIES})
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS ga76jug_says_hello ga76jug_says_hello_node
+# install(TARGETS assignement2 assignement2_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -175,7 +181,7 @@ target_link_libraries(hello_world_node ${catkin_LIBRARIES})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_ga76jug_says_hello.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_assignement2.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

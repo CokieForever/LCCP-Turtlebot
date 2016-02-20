@@ -1,0 +1,3 @@
+<launch>
+ <node name="exercise2" pkg="assignment2" type="exercise2" args="ga76jug" />
+</launch>
