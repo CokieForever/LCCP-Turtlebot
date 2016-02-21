@@ -163,6 +163,12 @@ cv::Mat FriendMatcher::removeIsolatedPixels(const cv::Mat& binImg, int nbMinNeig
     return output;
 }
 
+/**
+ * @brief color comparison, detection of a friend and computation of surrounding rectangle
+ * @param img recorded image
+ * @param scalarcolor scalar of color depending on friend
+ * @return
+ */
 std::vector<cv::Rect> FriendMatcher::getImageRects(const cv::Mat& img, cv::Scalar scalarcolor)
 {
     cv::Scalar scalarcolor2 = convertToLabSpace(scalarcolor);
@@ -178,37 +184,36 @@ std::vector<cv::Rect> FriendMatcher::getImageRects(const cv::Mat& img, cv::Scala
     imgCopysc.convertTo(imgCopysc, CV_32FC3, 1/255.0);
     cv::cvtColor(imgCopysc, imgCopysc, CV_BGR2Lab);
 
-    //Calculate the absolute difference between the scalar and the image
-    cv::absdiff(imgCopysc, scalarcolor2, image_scene);
 
-    //Calculate the pow
-    cv::pow(image_scene, 2, image_scene2);
+    cv::absdiff(imgCopysc, scalarcolor2, image_scene);///<Calculation of the absolute difference between the scalar and the image
 
-    //Split the channels in order to calculate the sum
-    cv::split(image_scene2, rgb1);
+
+    cv::pow(image_scene, 2, image_scene2);///<Calculation of the pow
+
+
+    cv::split(image_scene2, rgb1); ///<Split the channels in order to calculate the sum (x1-x2)^2+(y1-y2)^2+(z1-z2)^2
     add_res=rgb1[0]+rgb1[1]+rgb1[2];
-    //sgrt of the sum. Final DIstance
-    cv::sqrt(add_res, euclidean1);
-    //normalization according to maximum distance
-    euclidean1=(euclidean1/372.87);
+
+    cv::sqrt(add_res, euclidean1); ///<calculation of the final DIstance between image and scalar
+
+    euclidean1=(euclidean1/372.87);///<normalization according to maximum distance
 
     cv::Mat scene, obj;
 
-    //Set the pixels with euclidean distance from the scalar <0.15
 
-    cv::threshold(euclidean1, scene, 0.20, 1, cv::THRESH_BINARY_INV);
-    /*cv::imshow("Scene", scene);
-    cv::waitKey(1);*/
 
-    //find contours in the image.
-    cv::Mat euclideanCopy2=scene.clone();
+    cv::threshold(euclidean1, scene, 0.20, 1, cv::THRESH_BINARY_INV);///<Set the pixels with euclidean distance from the scalar <0.2
+
+
+
+    cv::Mat euclideanCopy2=scene.clone();///<find contours in the image.
     euclideanCopy2.convertTo(euclideanCopy2, CV_8U, 255);
     cv::Mat aFullImgCopy = euclideanCopy2.clone();
 
     cv::findContours( euclideanCopy2, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cv::Point(0, 0) );
 
-    //ignore the black contours
-    for(int i=0; i<contours.size(); i++)
+
+    for(int i=0; i<contours.size(); i++) ///<ignore the black contours
     {
         if (cv::contourArea(contours[i],true) > 0)
         {
@@ -233,7 +238,7 @@ std::vector<cv::Rect> FriendMatcher::getImageRects(const cv::Mat& img, cv::Scala
         cv::approxPolyDP( cv::Mat(contours[i]), contours_poly[i], 3, true );
         area=cv::contourArea(contours_poly[i]);
         //ROS_INFO("area %.3f", area );
-        //ignore the contours that have area less than 10*10
+        ///<ignore the contours that have area less than 10*10
         if (area<100)
         {
             contours.erase(contours.begin() + i);
