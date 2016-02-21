@@ -15,11 +15,14 @@
 using namespace cv;
 using namespace std;
 
-
+/**
+*@brief constructor
+*@param nodeHanlde 	The main node handle
+*/
 DetectFriend::DetectFriend(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle)
 {
     ROS_INFO("Subscribing to camera image topic...");
-    m_cameraSub = m_nodeHandle.subscribe("/camera/rgb/image_raw", 1, &DetectFriend::cameraSubCallback, this);
+    m_cameraSub = m_nodeHandle.subscribe("/camera/rgb/image_raw", 1, &DetectFriend::cameraSubCallback, this);///<subscribing to the camera
     ros::Rate loopRate(10);
     while (ros::ok() && m_cameraSub.getNumPublishers() <= 0)
         loopRate.sleep();
@@ -28,26 +31,26 @@ DetectFriend::DetectFriend(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     if (!m_nodeHandle.getParam("package_path", packagePath))
        ROS_WARN("The package path is not set, it will default to '~'.");
     
-    star_image= cv::imread( packagePath + "/star-ref.png");
-    mushroom_image= cv::imread(packagePath + "/mushroom-ref.png");
-    coin_image= cv::imread(packagePath + "/coin-ref.png");
+    star_image= cv::imread( packagePath + "/star-ref.png");///<reading the star reference image
+    mushroom_image= cv::imread(packagePath + "/mushroom-ref.png");///<reading the mushroom reference image
+    coin_image= cv::imread(packagePath + "/coin-ref.png"); ///<reading the coin reference image
     if( !star_image.data || !mushroom_image.data || !coin_image.data )
     {
         ROS_INFO("EMPTY IMAGE");
         ROS_INFO("%s", (packagePath + "/coin-ref.png").c_str());
     }
     ROS_INFO("Creating friend's topic...");
-    m_friend_idPub = m_nodeHandle.advertise<detect_friend::FriendsInfos>("/friendinfo", 10);
-    Scalar yellowstar(255, 255, 0);
-    Scalar redmushroom(255, 0, 0);
-    Scalar yellowcoin(247,215,32);
-    FriendMatcher::TemplateInfo star;
+    m_friend_idPub = m_nodeHandle.advertise<detect_friend::FriendsInfos>("/friendinfo", 10); ///< publisher of friend information
+    Scalar yellowstar(255, 255, 0); ///< declaration of scalar for star color
+    Scalar redmushroom(255, 0, 0); ///<declaration of scalar for mushroom color
+    Scalar yellowcoin(247,215,32); ///<declaration of scalar for coin color
+    FriendMatcher::TemplateInfo star; ///< TempalteInfo is a structure of FriendMatcher class
     FriendMatcher::TemplateInfo mushroom;
     FriendMatcher::TemplateInfo coin;
 
     ROS_INFO("Set template infos");
 
-    star.image=star_image;
+    star.image=star_image; ///<setting the members of the data structure TemplateInfo for all the friends
     star.id=0;
     star.mainColor=yellowstar;
     star.name="Star";
@@ -86,7 +89,10 @@ DetectFriend::DetectFriend(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     ROS_INFO("Done, everything's ready.");
 }
 
-
+/**
+*@brief Callback function of the topic "/camera/rgb/image_raw". The topic triggers the execution
+ * @param msg the received Image message
+*/
 
 void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
 {
@@ -112,11 +118,11 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     }
 
      //objects ids: 0 for star, 1 for mushroom, 2 for coin
-      FriendMatcher::MatchResult result1= m_friendmatcher.match(img, 0);
+      FriendMatcher::MatchResult result1= m_friendmatcher.match(img, 0); ///< friend matching
       FriendMatcher::MatchResult result2= m_friendmatcher.match(img, 1);
       FriendMatcher::MatchResult result3= m_friendmatcher.match(img, 2);
 
-      if (result1.score>min_score)
+      if (result1.score>min_score) ///< compare the score of the matching result and if it is larger than the minimum defined score, publish the infos
       {
         int id=0;
         friend_details=publish_infos_of_friend(img, id, result1.boundingRect);
@@ -124,9 +130,7 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
         friendsInfos.infos.push_back(friend_details);
         //id_friend.center.x=center_of_friend(int i, cv::Rect rect);
 
-        /*cv::Mat display = m_friendmatcher.drawResult(img, result1);
-        cv::imshow("Result1", display);
-        cv::waitKey(1);*/
+    
       }
 
       if (result2.score>min_score)
@@ -135,9 +139,7 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
         friend_details=publish_infos_of_friend(img, id, result2.boundingRect);
         friend_details.Time = msg->header.stamp;
         friendsInfos.infos.push_back(friend_details);
-        /*cv::Mat display = m_friendmatcher.drawResult(img, result2);
-        cv::imshow("Result2", display);
-        cv::waitKey(1);*/
+
       }
 
       if (result3.score>min_score)
@@ -146,9 +148,7 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
         friend_details=publish_infos_of_friend(img, id, result3.boundingRect);
         friend_details.Time = msg->header.stamp;
         friendsInfos.infos.push_back(friend_details);
-        /*cv::Mat display = m_friendmatcher.drawResult(img, result3);
-        cv::imshow("Result3", display);
-        cv::waitKey(1);*/
+ 
       }
       if (friendsInfos.infos.size()>0)
         {
@@ -158,10 +158,16 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
 }
 
 
+/**
+*@brief publish information of friends
+ * @param img cv::Mat recorded image
+ * @param id  int id of friend
+ * @param rectangular  Rect rectangle surrounding the friend contour
+*/
 detect_friend::Friend_id DetectFriend::publish_infos_of_friend(const cv::Mat& img, int id, Rect rectangle )
 {
-  Point center;
-  Point corners[4];
+  Point center; ///< coordinates of friend center in the recorded image
+  Point corners[4]; ///< coordinated of the 4 corners of the detected friend in the recorded image
   double width=img.rows;
   double height=img.cols;
   corners[1].x=rectangle.tl().x;
@@ -193,18 +199,24 @@ detect_friend::Friend_id DetectFriend::publish_infos_of_friend(const cv::Mat& im
         }
 
       detect_friend::Friend_id friendInfo;
-      friendInfo.x = 2*(center.x /(double)width)-1;
-      friendInfo.y = 2*(center.y/(double)height)-1;
-      friendInfo.dz = FRIEND_SIZE * FRIEND_REF_DIST / rectangle.height;
-      friendInfo.dx = FRIEND_SIZE * (center.x-width/2) / rectangle.width;
-      friendInfo.dy = FRIEND_SIZE * (center.y-height/2) / rectangle.height;
-      friendInfo.d = sqrt(friendInfo.dy*friendInfo.dy + friendInfo.dx*friendInfo.dx + friendInfo.dz*friendInfo.dz);
-      friendInfo.id = id;
+      friendInfo.x = 2*(center.x /(double)width)-1; ///<set the coordinate x of friend's center
+      friendInfo.y = 2*(center.y/(double)height)-1; ///<set the coordinate y of friend's center
+      friendInfo.dz = FRIEND_SIZE * FRIEND_REF_DIST / rectangle.height; ///<set dz distance of robot 
+      friendInfo.dx = FRIEND_SIZE * (center.x-width/2) / rectangle.width; ///< set dx from image center 
+      friendInfo.dy = FRIEND_SIZE * (center.y-height/2) / rectangle.height;///< set dy from image center
+      friendInfo.d = sqrt(friendInfo.dy*friendInfo.dy + friendInfo.dx*friendInfo.dx + friendInfo.dz*friendInfo.dz); ///<set distance
+      friendInfo.id = id; ///<set id of friend
       return friendInfo;
 
 }
 }
 
+/**
+*@brief compute center of friend in recorded image
+ * @param linePoints1[2] Point, corners of friend rectangle
+ * @param linePoints2[2] Point, corners of friend rectangle
+ * @param isecPoint Point, center of friend
+*/
  bool DetectFriend::ComputeLinesIntersection(Point linePoints1[2], Point linePoints2[2], Point *isectPoint)
   {
       double x1 = linePoints1[0].x;
@@ -226,6 +238,8 @@ detect_friend::Friend_id DetectFriend::publish_infos_of_friend(const cv::Mat& im
       return true;
   }
 
+
+
   bool DetectFriend::ComputeQuadrilateralCenter(Point points[4], Point *centerPoint)
   {
       Point linePoints1[2] = {points[0], points[2]};
@@ -233,7 +247,9 @@ detect_friend::Friend_id DetectFriend::publish_infos_of_friend(const cv::Mat& im
       return ComputeLinesIntersection(linePoints1, linePoints2, centerPoint);
   }
 
-
+/**
+*@brief start the process of identification. Called by main function
+*/
 void DetectFriend::Identification()
 {
     ROS_INFO("Starting identification.");
