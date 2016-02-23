@@ -270,9 +270,9 @@ cv::Mat DetectMarker::deblurring(cv::Mat img)
     cv::Mat kernel1= cv::Mat::zeros(1, size_zeros, CV_64F);
     cv::Mat kernel2=cv::Mat::ones(1, kernel_size-size_zeros, CV_64F)/(kernel_size-size_zeros);
     cv::hconcat(kernel1, kernel2, kernel);
-    cv::Mat J1;  ///<J1 is the original grayscale image
-    cv::Mat J2; ///<J2 is the result of each iteration
-    cv::Mat J3;///<J3 is the result of the previous iteration
+    cv::Mat J1;  //J1 is the original grayscale image
+    cv::Mat J2; //J2 is the result of each iteration
+    cv::Mat J3;//J3 is the result of the previous iteration
     cv::Mat J4;
     cv::Mat wI;
     cv::Mat anEstimate;
@@ -300,20 +300,20 @@ cv::Mat DetectMarker::deblurring(cv::Mat img)
     wI=im.clone();
 
 
-    for (r=0; r<kernel_size-size_zeros; r++)///<create an array with all the non-zero values of the kernel in their normal order
+    for (r=0; r<kernel_size-size_zeros; r++)//create an array with all the non-zero values of the kernel in their normal order
     {
         Kernel_values.at<double>(r)=kernel.at<double>(kernel_size-size_zeros+r-1);
     }
 
 
-    cv::hconcat(Kernel_values, zeros_add, kernel_zeros_concat);///<concatenate the non-tero values with the zeros in order to crate a row (1*im.cols)
+    cv::hconcat(Kernel_values, zeros_add, kernel_zeros_concat);//concatenate the non-tero values with the zeros in order to crate a row (1*im.cols)
 
-    H.row(0)=H.row(0)+kernel_zeros_concat;///<first elements of H have the non-zero values of the kernel. The rest values are zero
+    H.row(0)=H.row(0)+kernel_zeros_concat;//first elements of H have the non-zero values of the kernel. The rest values are zero
 
-    cv::dft(H, Hdft, cv::DFT_COMPLEX_OUTPUT);///<Discrete Fourier Transformation
+    cv::dft(H, Hdft, cv::DFT_COMPLEX_OUTPUT);//Discrete Fourier Transformation
 
 
-    for(i=0 ; i<10 ; i++)///<deblurring through ten iterations
+    for(i=0 ; i<10 ; i++)//deblurring through ten iterations
     {
         if(i > 1)
         {
@@ -326,17 +326,17 @@ cv::Mat DetectMarker::deblurring(cv::Mat img)
         Y = cv::max(J2 + lambda*(J2 - J3),(double)0);
         cv::dft(Y, Ydft, cv::DFT_COMPLEX_OUTPUT);
 
-        cv::mulSpectrums(Hdft, Ydft, HYdft, 0);///<multiplication of Fourier transformations
+        cv::mulSpectrums(Hdft, Ydft, HYdft, 0);//multiplication of Fourier transformations
 
-        cv::idft(HYdft, HYidft, cv::DFT_SCALE + cv::DFT_REAL_OUTPUT);///<inverse Fourier transformation
+        cv::idft(HYdft, HYidft, cv::DFT_SCALE + cv::DFT_REAL_OUTPUT);//inverse Fourier transformation
 
-        HYidft.setTo(eps, HYidft==0);///<set to eps when zero, to erase problems with the following divisions
+        HYidft.setTo(eps, HYidft==0);//set to eps when zero, to erase problems with the following divisions
         cv::divide(wI, HYidft, anEstimate1, 1);
         anEstimate= anEstimate1+eps;
         cv::dft(anEstimate, anEstimate_dft, cv::DFT_COMPLEX_OUTPUT);
         J3=J2.clone();
 
-        cv::split(Hdft, planes);///<conj calculation
+        cv::split(Hdft, planes);//conj calculation
         planes[1]=-planes[1];
         cv::merge(planes, 2 , Hdft_conj);
 
@@ -349,7 +349,7 @@ cv::Mat DetectMarker::deblurring(cv::Mat img)
     }
     
     J2.convertTo(J2, CV_8U, 255.0);
-    return J2; ///<return deblurred image
+    return J2; //return deblurred image
 }
 
 

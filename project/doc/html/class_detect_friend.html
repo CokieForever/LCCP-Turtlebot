@@ -103,10 +103,10 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a75829485605e220a44c265a1721f2e97"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_detect_friend.html#a75829485605e220a44c265a1721f2e97">DetectFriend</a> (ros::NodeHandle &amp;nodeHandle)</td></tr>
-<tr class="memdesc:a75829485605e220a44c265a1721f2e97"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  <a href="#a75829485605e220a44c265a1721f2e97">More...</a><br /></td></tr>
+<tr class="memdesc:a75829485605e220a44c265a1721f2e97"><td class="mdescLeft">&#160;</td><td class="mdescRight">constructor  <a href="#a75829485605e220a44c265a1721f2e97">More...</a><br /></td></tr>
 <tr class="separator:a75829485605e220a44c265a1721f2e97"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3effcf07c9624fe47835ee0de38ffd03"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_detect_friend.html#a3effcf07c9624fe47835ee0de38ffd03">Identification</a> ()</td></tr>
-<tr class="memdesc:a3effcf07c9624fe47835ee0de38ffd03"><td class="mdescLeft">&#160;</td><td class="mdescRight">function called to start identification  <a href="#a3effcf07c9624fe47835ee0de38ffd03">More...</a><br /></td></tr>
+<tr class="memdesc:a3effcf07c9624fe47835ee0de38ffd03"><td class="mdescLeft">&#160;</td><td class="mdescRight">start the process of identification. Called by main function  <a href="#a3effcf07c9624fe47835ee0de38ffd03">More...</a><br /></td></tr>
 <tr class="separator:a3effcf07c9624fe47835ee0de38ffd03"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-attribs"></a>
@@ -139,10 +139,9 @@ Private Member Functions</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-static-methods"></a>
 Static Private Member Functions</h2></td></tr>
 <tr class="memitem:ae5c9f0b433e110487a441b616c35abb7"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_detect_friend.html#ae5c9f0b433e110487a441b616c35abb7">ComputeLinesIntersection</a> (cv::Point linePoints1[2], cv::Point linePoints2[2], cv::Point *isectPoint)</td></tr>
-<tr class="memdesc:ae5c9f0b433e110487a441b616c35abb7"><td class="mdescLeft">&#160;</td><td class="mdescRight">used to compute the center of the friend in the recorded image  <a href="#ae5c9f0b433e110487a441b616c35abb7">More...</a><br /></td></tr>
+<tr class="memdesc:ae5c9f0b433e110487a441b616c35abb7"><td class="mdescLeft">&#160;</td><td class="mdescRight">compute center of friend in recorded image  <a href="#ae5c9f0b433e110487a441b616c35abb7">More...</a><br /></td></tr>
 <tr class="separator:ae5c9f0b433e110487a441b616c35abb7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a81d320a6456445646465511573d7dd22"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_detect_friend.html#a81d320a6456445646465511573d7dd22">ComputeQuadrilateralCenter</a> (cv::Point points[4], cv::Point *centerPoint)</td></tr>
-<tr class="memdesc:a81d320a6456445646465511573d7dd22"><td class="mdescLeft">&#160;</td><td class="mdescRight">used to compute the center of the friend in the recorded image  <a href="#a81d320a6456445646465511573d7dd22">More...</a><br /></td></tr>
 <tr class="separator:a81d320a6456445646465511573d7dd22"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-attribs"></a>
@@ -186,24 +185,13 @@ Private Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Constructor. </p>
-<p>constructor</p>
+<p>constructor </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">nodeHanlde</td><td>The main node handle </td></tr>
   </table>
   </dd>
 </dl>
-<p>&lt;subscribing to the camera</p>
-<p>&lt;reading the star reference image</p>
-<p>&lt;reading the mushroom reference image</p>
-<p>&lt;reading the coin reference image</p>
-<p>&lt; publisher of friend information</p>
-<p>&lt; declaration of scalar for star color</p>
-<p>&lt;declaration of scalar for mushroom color</p>
-<p>&lt;declaration of scalar for coin color</p>
-<p>&lt; TempalteInfo is a structure of <a class="el" href="class_friend_matcher.html">FriendMatcher</a> class</p>
-<p>&lt;setting the members of the data structure TemplateInfo for all the friends </p>
 
 </div>
 </div>
@@ -237,8 +225,6 @@ Private Attributes</h2></td></tr>
   </table>
   </dd>
 </dl>
-<p>&lt; friend matching</p>
-<p>&lt; compare the score of the matching result and if it is larger than the minimum defined score, publish the infos </p>
 
 </div>
 </div>
@@ -280,8 +266,7 @@ Private Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>used to compute the center of the friend in the recorded image </p>
-<p>compute center of friend in recorded image</p>
+<p>compute center of friend in recorded image </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">linePoints1[2]</td><td>Point, corners of friend rectangle </td></tr>
@@ -325,8 +310,6 @@ Private Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>used to compute the center of the friend in the recorded image </p>
-
 </div>
 </div>
 <a class="anchor" id="a3effcf07c9624fe47835ee0de38ffd03"></a>
@@ -342,7 +325,6 @@ Private Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>function called to start identification </p>
 <p>start the process of identification. Called by main function </p>
 
 </div>
@@ -395,15 +377,6 @@ Private Attributes</h2></td></tr>
   </table>
   </dd>
 </dl>
-<p>&lt; coordinates of friend center in the recorded image</p>
-<p>&lt; coordinated of the 4 corners of the detected friend in the recorded image</p>
-<p>&lt;set the coordinate x of friend's center</p>
-<p>&lt;set the coordinate y of friend's center</p>
-<p>&lt;set dz distance of robot</p>
-<p>&lt; set dx from image center</p>
-<p>&lt; set dy from image center</p>
-<p>&lt;set distance</p>
-<p>&lt;set id of friend </p>
 
 </div>
 </div>
