@@ -22,7 +22,7 @@ using namespace std;
 DetectFriend::DetectFriend(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle)
 {
     ROS_INFO("Subscribing to camera image topic...");
-    m_cameraSub = m_nodeHandle.subscribe("/camera/rgb/image_raw", 1, &DetectFriend::cameraSubCallback, this);///<subscribing to the camera
+    m_cameraSub = m_nodeHandle.subscribe("/camera/rgb/image_raw", 1, &DetectFriend::cameraSubCallback, this);//subscribing to the camera
     ros::Rate loopRate(10);
     while (ros::ok() && m_cameraSub.getNumPublishers() <= 0)
         loopRate.sleep();
@@ -31,26 +31,26 @@ DetectFriend::DetectFriend(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     if (!m_nodeHandle.getParam("package_path", packagePath))
        ROS_WARN("The package path is not set, it will default to '~'.");
     
-    star_image= cv::imread( packagePath + "/star-ref.png");///<reading the star reference image
-    mushroom_image= cv::imread(packagePath + "/mushroom-ref.png");///<reading the mushroom reference image
-    coin_image= cv::imread(packagePath + "/coin-ref.png"); ///<reading the coin reference image
+    star_image= cv::imread( packagePath + "/star-ref.png");//reading the star reference image
+    mushroom_image= cv::imread(packagePath + "/mushroom-ref.png");//reading the mushroom reference image
+    coin_image= cv::imread(packagePath + "/coin-ref.png"); //reading the coin reference image
     if( !star_image.data || !mushroom_image.data || !coin_image.data )
     {
         ROS_INFO("EMPTY IMAGE");
         ROS_INFO("%s", (packagePath + "/coin-ref.png").c_str());
     }
     ROS_INFO("Creating friend's topic...");
-    m_friend_idPub = m_nodeHandle.advertise<detect_friend::FriendsInfos>("/friendinfo", 10); ///< publisher of friend information
-    Scalar yellowstar(255, 255, 0); ///< declaration of scalar for star color
-    Scalar redmushroom(255, 0, 0); ///<declaration of scalar for mushroom color
-    Scalar yellowcoin(247,215,32); ///<declaration of scalar for coin color
-    FriendMatcher::TemplateInfo star; ///< TempalteInfo is a structure of FriendMatcher class
+    m_friend_idPub = m_nodeHandle.advertise<detect_friend::FriendsInfos>("/friendinfo", 10); // publisher of friend information
+    Scalar yellowstar(255, 255, 0); //declaration of scalar for star color
+    Scalar redmushroom(255, 0, 0); //declaration of scalar for mushroom color
+    Scalar yellowcoin(247,215,32); //declaration of scalar for coin color
+    FriendMatcher::TemplateInfo star; // TempalteInfo is a structure of FriendMatcher class
     FriendMatcher::TemplateInfo mushroom;
     FriendMatcher::TemplateInfo coin;
 
     ROS_INFO("Set template infos");
 
-    star.image=star_image; ///<setting the members of the data structure TemplateInfo for all the friends
+    star.image=star_image; //setting the members of the data structure TemplateInfo for all the friends
     star.id=0;
     star.mainColor=yellowstar;
     star.name="Star";
@@ -118,11 +118,11 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
     }
 
      //objects ids: 0 for star, 1 for mushroom, 2 for coin
-      FriendMatcher::MatchResult result1= m_friendmatcher.match(img, 0); ///< friend matching
+      FriendMatcher::MatchResult result1= m_friendmatcher.match(img, 0); //friend matching
       FriendMatcher::MatchResult result2= m_friendmatcher.match(img, 1);
       FriendMatcher::MatchResult result3= m_friendmatcher.match(img, 2);
 
-      if (result1.score>min_score) ///< compare the score of the matching result and if it is larger than the minimum defined score, publish the infos
+      if (result1.score>min_score) // compare the score of the matching result and if it is larger than the minimum defined score, publish the infos
       {
         int id=0;
         friend_details=publish_infos_of_friend(img, id, result1.boundingRect);
@@ -166,8 +166,8 @@ void DetectFriend::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
 */
 detect_friend::Friend_id DetectFriend::publish_infos_of_friend(const cv::Mat& img, int id, Rect rectangle )
 {
-  Point center; ///< coordinates of friend center in the recorded image
-  Point corners[4]; ///< coordinated of the 4 corners of the detected friend in the recorded image
+  Point center; // coordinates of friend center in the recorded image
+  Point corners[4]; // coordinated of the 4 corners of the detected friend in the recorded image
   double width=img.rows;
   double height=img.cols;
   corners[1].x=rectangle.tl().x;
@@ -199,13 +199,13 @@ detect_friend::Friend_id DetectFriend::publish_infos_of_friend(const cv::Mat& im
         }
 
       detect_friend::Friend_id friendInfo;
-      friendInfo.x = 2*(center.x /(double)width)-1; ///<set the coordinate x of friend's center
-      friendInfo.y = 2*(center.y/(double)height)-1; ///<set the coordinate y of friend's center
-      friendInfo.dz = FRIEND_SIZE * FRIEND_REF_DIST / rectangle.height; ///<set dz distance of robot 
-      friendInfo.dx = FRIEND_SIZE * (center.x-width/2) / rectangle.width; ///< set dx from image center 
-      friendInfo.dy = FRIEND_SIZE * (center.y-height/2) / rectangle.height;///< set dy from image center
-      friendInfo.d = sqrt(friendInfo.dy*friendInfo.dy + friendInfo.dx*friendInfo.dx + friendInfo.dz*friendInfo.dz); ///<set distance
-      friendInfo.id = id; ///<set id of friend
+      friendInfo.x = 2*(center.x /(double)width)-1; //set the coordinate x of friend's center
+      friendInfo.y = 2*(center.y/(double)height)-1; //set the coordinate y of friend's center
+      friendInfo.dz = FRIEND_SIZE * FRIEND_REF_DIST / rectangle.height; //set dz distance of robot
+      friendInfo.dx = FRIEND_SIZE * (center.x-width/2) / rectangle.width; // set dx from image center
+      friendInfo.dy = FRIEND_SIZE * (center.y-height/2) / rectangle.height;//set dy from image center
+      friendInfo.d = sqrt(friendInfo.dy*friendInfo.dy + friendInfo.dx*friendInfo.dx + friendInfo.dz*friendInfo.dz); //set distance
+      friendInfo.id = id; //set id of friend
       return friendInfo;
 
 }
