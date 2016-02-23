@@ -6,9 +6,6 @@ DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
 }
 void DetectMarker::Start()
 {
-  cout << "before signal" << endl;
-
-
     si_status_togui("Subscribing to image topic: Waiting for publisher...");
     cout << "before signal" << endl;
     m_cameraSub = m_nodeHandle.subscribe("/camera/rgb/image_rect_color", 1, &DetectMarker::cameraSubCallback, this);

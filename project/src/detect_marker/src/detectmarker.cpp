@@ -26,11 +26,20 @@ DetectMarker::DetectMarker(ros::NodeHandle& nodeHandle): m_nodeHandle(nodeHandle
     
     ROS_INFO("Done, everything's ready.");
 }
-
+/**
+ * @brief Callback of the /mobile_base/sensors/imu_data topic.
+ * @param imu sensor_msgs::Imu
+ */
 void DetectMarker::IMUCallback(const sensor_msgs::Imu::ConstPtr& imu)
 {
     m_isRotating = fabs(imu->angular_velocity.z) > 0.4;
 }
+
+
+/**
+ * @brief splits the recorded image and zooms it in
+ * @param img cv::Mat, nbBlocks int, vecX std::vector<int>, vecY std::vector<int>
+ */
 
 std::vector<cv::Mat> DetectMarker::splitImageAndZoom(cv::Mat& img, int nbBlocks, std::vector<int>& vecX, std::vector<int>& vecY)
 {
@@ -55,6 +64,10 @@ std::vector<cv::Mat> DetectMarker::splitImageAndZoom(cv::Mat& img, int nbBlocks,
     return vec;
 }
 
+/**
+ * @brief Callback of the /camera/rgb/image_raw topic.
+ * @param imu sensor_msgs::Imu
+ */
 void DetectMarker::cameraSubCallback(const sensor_msgs::ImageConstPtr& msg)
 {
     //ROS_INFO("Received image from camera.");
@@ -241,6 +254,11 @@ void DetectMarker::detect()
     ros::spin();
 }
 
+
+/**
+ * @brief deblurring the recorded image with Lucy Richardson algorithm.
+ * @param img cv::Mat
+ */
 cv::Mat DetectMarker::deblurring(cv::Mat img)
 {
     cv::Mat im;
@@ -252,9 +270,9 @@ cv::Mat DetectMarker::deblurring(cv::Mat img)
     cv::Mat kernel1= cv::Mat::zeros(1, size_zeros, CV_64F);
     cv::Mat kernel2=cv::Mat::ones(1, kernel_size-size_zeros, CV_64F)/(kernel_size-size_zeros);
     cv::hconcat(kernel1, kernel2, kernel);
-    cv::Mat J1;
-    cv::Mat J2;
-    cv::Mat J3;
+    cv::Mat J1;  //J1 is the original grayscale image
+    cv::Mat J2; //J2 is the result of each iteration
+    cv::Mat J3;//J3 is the result of the previous iteration
     cv::Mat J4;
     cv::Mat wI;
     cv::Mat anEstimate;
@@ -281,21 +299,21 @@ cv::Mat DetectMarker::deblurring(cv::Mat img)
     J2=im.clone();
     wI=im.clone();
 
-    //create an array with all the non-zero values of the kernel in their normal order
-    for (r=0; r<kernel_size-size_zeros; r++)
+
+    for (r=0; r<kernel_size-size_zeros; r++)//create an array with all the non-zero values of the kernel in their normal order
     {
         Kernel_values.at<double>(r)=kernel.at<double>(kernel_size-size_zeros+r-1);
     }
 
-    //concatenate the non-tero values with the zeros in order to crate a row (1*im.cols)
-    cv::hconcat(Kernel_values, zeros_add, kernel_zeros_concat);
-    //first elements of H have the non-zero values of the kernel. The rest values are zero
-    H.row(0)=H.row(0)+kernel_zeros_concat;
-    //Discrete Fourier Transform
-    cv::dft(H, Hdft, cv::DFT_COMPLEX_OUTPUT);
-    //deblurring through ten iterations
-    //J1 is the original grayscale image, J2 is the result of each iteration, J3 is the result of the previous iteration  
-    for(i=0 ; i<10 ; i++)
+
+    cv::hconcat(Kernel_values, zeros_add, kernel_zeros_concat);//concatenate the non-tero values with the zeros in order to crate a row (1*im.cols)
+
+    H.row(0)=H.row(0)+kernel_zeros_concat;//first elements of H have the non-zero values of the kernel. The rest values are zero
+
+    cv::dft(H, Hdft, cv::DFT_COMPLEX_OUTPUT);//Discrete Fourier Transformation
+
+
+    for(i=0 ; i<10 ; i++)//deblurring through ten iterations
     {
         if(i > 1)
         {
@@ -307,18 +325,18 @@ cv::Mat DetectMarker::deblurring(cv::Mat img)
 
         Y = cv::max(J2 + lambda*(J2 - J3),(double)0);
         cv::dft(Y, Ydft, cv::DFT_COMPLEX_OUTPUT);
-        //multiplication of Fourier transformations
-        cv::mulSpectrums(Hdft, Ydft, HYdft, 0);
-        //inverse Fourier transformation
-        cv::idft(HYdft, HYidft, cv::DFT_SCALE + cv::DFT_REAL_OUTPUT);
-        //set to eps when zero, to erase problems with the following divisions
-        HYidft.setTo(eps, HYidft==0);
+
+        cv::mulSpectrums(Hdft, Ydft, HYdft, 0);//multiplication of Fourier transformations
+
+        cv::idft(HYdft, HYidft, cv::DFT_SCALE + cv::DFT_REAL_OUTPUT);//inverse Fourier transformation
+
+        HYidft.setTo(eps, HYidft==0);//set to eps when zero, to erase problems with the following divisions
         cv::divide(wI, HYidft, anEstimate1, 1);
         anEstimate= anEstimate1+eps;
         cv::dft(anEstimate, anEstimate_dft, cv::DFT_COMPLEX_OUTPUT);
         J3=J2.clone();
-        //conj calculation
-        cv::split(Hdft, planes);
+
+        cv::split(Hdft, planes);//conj calculation
         planes[1]=-planes[1];
         cv::merge(planes, 2 , Hdft_conj);
 
@@ -331,8 +349,9 @@ cv::Mat DetectMarker::deblurring(cv::Mat img)
     }
     
     J2.convertTo(J2, CV_8U, 255.0);
-    return J2;
+    return J2; //return deblurred image
 }
+
 
 cv::Mat DetectMarker::binarizeImage(cv::Mat& img, bool strong)
 {

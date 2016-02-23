@@ -105,8 +105,8 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(deadreckoning src/deadreckoning.cpp src/sdl_gfx/SDL_rotozoom.c)
-add_dependencies(deadreckoning deadreckoning_generate_messages_cpp detect_marker_generate_messages_cpp detect_friend_generate_messages_cpp)
+add_executable(deadreckoning src/deadreckoning_main.cpp src/deadreckoning.cpp src/sdl_gfx/SDL_rotozoom.c)
+add_dependencies(deadreckoning dead_reckoning_generate_messages_cpp detect_marker_generate_messages_cpp detect_friend_generate_messages_cpp)
 add_executable(sensordisplay src/sensordisplay.cpp)
 
 ## Add cmake target dependencies of the executable/library

@@ -184,6 +184,7 @@ include_directories(
 
 ## Specify libraries to link a library or executable target against
 add_executable(turtlebot_gui ${SOURCE_FILES} ${MOC_SRC_H} ${MOC_GUI_H})
+add_dependencies(turtlebot_gui turtlebot_ui_generate_messages_cpp)
 target_link_libraries(turtlebot_gui ${QT_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBS})
 #############
 ## Install ##

@@ -131,7 +131,7 @@ add_executable(mover src/movement.cpp src/run_mover)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(movement_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(mover detect_marker_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(mover ${catkin_LIBRARIES} ${OpenCV_LIBS})
